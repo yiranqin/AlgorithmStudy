@@ -17,11 +17,29 @@ public class MathHandler {
 	
 	public void start(){
 
-//		bitManipulationTest();		
-		geometryTest();
+//		bitManipulationTest();
+//		arithmeticOperationTest();
+//		geometryTest();
 //		numToStringUtilTest();
+//		digitNumTest();
+		matrixTest();
 	}
 	
+	public void matrixTest(){
+//		int[][] matrix = MatrixUtil.generateNonDupMatrix(5, 5);
+//		MatrixUtil.printMatrix(matrix);
+//		System.out.println();
+//		MatrixUtil.printMatrixClockwise(matrix);
+//		MatrixUtil.printMatrixClockwiseRecursively(matrix, 0, 0, matrix[0].length - 1, matrix.length - 1, 0);
+////		MatrixUtil.rotateSquareMatrix(matrix);
+////		MatrixUtil.printMatrix(matrix);
+//		int[][] rotatedMatrix = MatrixUtil.rotateRandomMatrix(matrix);
+//		MatrixUtil.printMatrix(rotatedMatrix);
+		
+		MatrixUtil.nQueenPermutation(8);
+		MatrixUtil.nQueenBackTracking(8);
+	}
+		
 	public void numToStringUtilTest(){
 		System.out.println(NumToStringUtil.convertIntegerToEnglish(2019340123));
 		NumToStringUtil.numberToAlphabeticalString();
@@ -79,6 +97,9 @@ public class MathHandler {
 		
 		System.out.println(MathUtil.negate(-1));
 		System.out.println(MathUtil.divide(15, -3));
+		
+		MathUtil.findQuirkyNumbers();
+    	System.out.println(MathUtil.reverseNumber(432));
 	}
 	
 	public void findNthNumberComposedByThreePrimesTest(){
@@ -143,12 +164,6 @@ public class MathHandler {
 		
 	}
 	
-	public void matrixTest(){
-		int[][] matrix = MatrixUtil.generateNonDupMatrix(5, 7);
-		MatrixUtil.printMatrix(matrix);
-		MatrixUtil.printMatrixClockwise(matrix);
-		MatrixUtil.printMatrixClockwiseRecursively(matrix, 0, 0, matrix[0].length - 1, matrix.length - 1, 0);
-	}
 	
 	public void diceTest(){
 		MathUtil.printSumProbabilityOfDiceRecursively(10);
@@ -252,32 +267,47 @@ public class MathHandler {
 	}
 	
 	public void bitManipulationTest(){
-		System.out.println(Integer.toBinaryString(BitManipulationUtil.insertMIntoN(-1, 19, 2, 6)));
+//		int num = BitManipulationUtil.insertMIntoN(-1, 19, 2, 6);
+//		System.out.println(Integer.toBinaryString(num));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.rotateShiftLeft(num, 5)));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.rotateShiftLeft(num, 31)));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.rotateShiftLeft(num, 32)));
+//		
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.rotateShiftRight(num, 7)));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.rotateShiftRight(num, 31)));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.rotateShiftRight(num, 32)));
+//		
+//		System.out.println(BitManipulationUtil.doubleBinaryString(0.375));
 		
-		System.out.println(BitManipulationUtil.doubleBinaryString(0.375));
-		
-		int[] array = ArrayUtil.generateArrayWithMask(0, 16, new int[]{13});
+		int start = 0;
+		int end = 15;
+		int[] array = ArrayUtil.generateArrayWithMask(start, end - start + 1, new int[]{0});//new int[]{10, 8});//null);//
+		ArrayUtil.shuffleArray(array);
 		ArrayUtil.printArray(array);
 		System.out.println(BitManipulationUtil.findMissingInteger(array));
 		System.out.println(BitManipulationUtil.findMissingIntegerRecursively(array));
-		System.out.println(BitManipulationUtil.findMissingIntegerInIncreasingSequence(array, 0, 15));
+		System.out.println(BitManipulationUtil.findMissingIntegerInIncreasingSequence(array, start, end));
+		array = ArrayUtil.generateArrayWithMask(start, end - start + 1, new int[]{14, 15});//null);//
+		ArrayUtil.shuffleArray(array);
+		ArrayUtil.printArray(array);
+		ArrayUtil.printArray(BitManipulationUtil.findMissingTwoIntegersInIncreasingSequence(array, start, end));
 		
-		int[] testArray1 = {1, 1, 0, 2, 3, 3, 0, 5, 5, 6, 7, 8, 7 , 10, 6, 8, 9};
-		int[] testArray2 = {1, 2, 3};
-		ArrayUtil.printArray(BitManipulationUtil.findThreeIntegersAppearOnce(testArray1));
-		ArrayUtil.printArray(BitManipulationUtil.findThreeIntegersAppearOnce(testArray2));
-		
-		byte[] screen = new byte[4];
-		System.out.println(ArrayUtil.toBinaryString(screen));
-		System.out.println(ArrayUtil.toBinaryString(BitManipulationUtil.drawLine(screen, 32, 1, 30, 0)));
-		
-		int test = Integer.MAX_VALUE - ((int)Math.pow(2, 10) - 1);
-		System.out.println(Integer.toBinaryString(test));
-		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextLarger(test)));
-		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextLarger(9)));
-		
-		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextSmaller((int)Math.pow(2, 10) - 1)));
-		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextSmaller(9)));
+//		int[] testArray1 = {1, 1, 0, 2, 3, 3, 0, 5, 5, 6, 7, 8, 7 , 10, 6, 8, 9};
+//		int[] testArray2 = {1, 2, 3};
+//		ArrayUtil.printArray(BitManipulationUtil.findThreeIntegersAppearOnce(testArray1));
+//		ArrayUtil.printArray(BitManipulationUtil.findThreeIntegersAppearOnce(testArray2));
+//		
+//		byte[] screen = new byte[4];
+//		System.out.println(ArrayUtil.toBinaryString(screen));
+//		System.out.println(ArrayUtil.toBinaryString(BitManipulationUtil.drawLine(screen, 32, 1, 30, 0)));
+//		
+//		int test = Integer.MAX_VALUE - ((int)Math.pow(2, 10) - 1);
+//		System.out.println(Integer.toBinaryString(test));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextLarger(test)));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextLarger(9)));
+//		
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextSmaller((int)Math.pow(2, 10) - 1)));
+//		System.out.println(Integer.toBinaryString(BitManipulationUtil.findNextSmaller(9)));
 	}
 	
 	public void josephRingTest(){

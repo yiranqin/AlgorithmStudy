@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.PriorityQueue;
+//import java.util.PriorityQueue;
 import java.util.Scanner;
 
 import edu.upenn.yiranqin.arrayrelated.ArrayUtil;
@@ -26,30 +26,36 @@ public class FileBasedUtil{
 	 * 
 	 * @param file
 	 * @param memoryLimit in MB
+	 * @param useNIO whether use NIO to do the preprocessing
+	 * @param forParallelSorting true to use parallel sorting
+	 * 
+	 *TODO Still some bugs exist in the NIO way of handling small files, 
+	 * most likely the logic around the last few elements of each one still not quite right 
 	 */
 	
-	public static void externalSort(File file, int memoryLimit){
+	public static void externalSort(File file, int memoryLimit, boolean useNIO, boolean forParallelSorting){
 		if(!file.exists() || file.isDirectory())
 			return;
 		int fileSizeInMB = (int)file.length()/(1024 * 1024);
 		boolean secondPass = false;
 		int groups = fileSizeInMB/memoryLimit + 1 ;
 		
-		if(groups >= 100)
+		if(groups >= 50)
 			secondPass = true;
 		
 		/* preprocessing */
 		boolean inputNum = determineDataType(file); // true if the input is number, otherwise string
 		
-		File[] tmpFiles = preProcess(file, groups, memoryLimit * 1024 * 1024, inputNum, false);
-		String outputPath = file.getParentFile() + file.getName() + "-sorted";
+		File[] tmpFiles = preProcess(file, groups, memoryLimit * 1024 * 1024, inputNum, useNIO, forParallelSorting);
+		String outputPath = file.getParentFile() +"/" + file.getName() + "-sorted";
 		
 		if(inputNum){
 			if(secondPass){
 				int tmp = (int)Math.sqrt(groups);
 				int tmpGroups = (groups % tmp == 0) ? tmp : tmp + 1;
 				File[] intermediateFiles = new File[tmpGroups];
-				String intermediateOutputDir = file.getParentFile() + "/tmp-" + file.getName();
+				String intermediateOutputDir = file.getParentFile() + "/tmp-" + file.getName();				
+				
 				for(int i = 0; i < tmpGroups; i++){
 					File[] tmpInputFiles;
 					if(i != tmpGroups - 1)
@@ -60,6 +66,7 @@ public class FileBasedUtil{
 					for(int j = 0; j < tmpInputFiles.length; j++){
 						tmpInputFiles[j] = tmpFiles[i * tmp + j];
 					}
+					
 					String intermediateOutputPath = intermediateOutputDir + "/intermediate" + i;
 					intermediateFiles[i] = multiwayMergeNum(tmpInputFiles, intermediateOutputPath, memoryLimit * 1024 * 1024, 0);
 				}
@@ -105,12 +112,19 @@ public class FileBasedUtil{
 	/**
 	 * preProcess the file and form groups tmp files, the memoryLimit is relaxed only means the useful data in memory 
 	 * 
+	 *  use parallel sorting then the preProcess will utilize the java NIO transferTo technique
+	 *   so that a very large file will be divided into desired smaller pieces and use multiple threads to sort each of the smaller files
+	 *   since there are no race condition
+	 * 
 	 * @param file
 	 * @param groups how many tmp files will be created 
 	 * @param memoryLimit in Bytes
+	 * @param useNIO whether use NIO to do the preprocessing
+	 * @param forParallelSorting true to use parallel sorting
 	 */
-	private static File[] preProcess(File file, int groups, int memoryLimit, boolean isNum, boolean useNIO){
+	private static File[] preProcess(File file, int groups, int memoryLimit, boolean isNum, boolean useNIO, boolean forParallelSorting){
 		FileInputStream input = null;
+		FileReader inputIO = null;
 		PrintWriter[] writers = new PrintWriter[groups];
 		File[] tmpFiles = new File[groups];
 		for(int i = 0; i < groups; i++){
@@ -119,92 +133,142 @@ public class FileBasedUtil{
 		}
 //		writer = new PrintWriter(new FileWriter(file));
 		try{
-			input = new FileInputStream( file.getName() );
-			FileChannel channel = input.getChannel( );
-			ByteBuffer buffer = ByteBuffer.allocateDirect( 8 * 1024);
-			byte[] barray = new byte[memoryLimit];
-			
 			File tmpDir = new File(file.getParentFile() + "/tmp-" + file.getName());
 			if(!tmpDir.exists())
 				tmpDir.mkdir();
 			
-			boolean leftOver = false;
-			int curSize = 0;
-			int nInBuf = 0;
-			for(int i = 0; i < groups; i++){
-				tmpFiles[i] = new File(tmpDir.getAbsolutePath() + "/pre" +i);
-				if(!tmpFiles[i].exists())
-					tmpFiles[i].createNewFile();
-				writers[i] = new PrintWriter(new FileWriter(tmpFiles[i]));
+			/**
+			 * If using NIO, then data in file will be load directly into application buffer, 
+			 * we could use less memcpy and eliminate the extra memory usage for copying buffers
+			 * 
+			 * However in this case, we will have to sort the data, and put it into list
+			 * and the decoding(naive decoding render performance gain fairly small)
+			 *  required for parsing(form a new long string from binary data) 
+			 * plus the data buffer, we are actually at least three times the required memory usage
+			 * for the application viewpoint
+			 * 
+			 * Also, need to take care of the border cases since the data should be intact and not fragmented
+			 */
+			if(useNIO){
+				//TODO figure out why using this approach will crash and render null pointer, 
+				//TODO also figure out a way to utilize transferTo() method to separate the whole large file into smaller ones 
 				
-				int nRead = 0;
-				nInBuf = 0; 
-				while ( (nRead = channel.read( buffer )) != -1 )
-				{
-				    if ( nRead == 0 )
-				        continue;
-				    buffer.position( 0 );
-				    buffer.limit( nRead );
-				    while( buffer.hasRemaining())
-				    {	
-				    	nInBuf = buffer.remaining();
-				    	/**
-				    	 * As long as there is value in the buffer not mapped to application
-				    	 * While adding it into the destination buffer will exceed memory limit
-				    	 * take it as leftover and make it the first bytes for the next round 
-				    	 */
-				    	if(curSize + nInBuf > memoryLimit){
-				    		leftOver = true;
-				    		break;
-				    	}
-				        buffer.get( barray, curSize, nInBuf);
-				    	curSize += nInBuf;
-				    }
-				    if(leftOver)
-				    	break;
-				    
-				    buffer.clear();
-				}
-				
-				if(curSize == memoryLimit)
-					leftOver = false;
-				/**
-				 * Find the last delimiter in the buffer and calculate the offset
-				 * Always make the string end with delimiter and thus guarantee the data integrity
-				 */
-				int offset = findLastDelimiter(barray, curSize - 1);
-				curSize -= offset;
-				String value = new String(barray, 0, curSize, "US-ASCII");
-				String[] values = value.split(DELIMITER);
-				
-				if(isNum){
-					Long[] list = new Long[values.length]; 
-					for(int index = 0; index < values.length; index++){
-						list[index] = Long.parseLong(values[index]);
+				input = new FileInputStream( file.getName() );
+				FileChannel channel = input.getChannel( );
+				ByteBuffer buffer = ByteBuffer.allocateDirect( 8 * 1024);
+				byte[] barray = new byte[memoryLimit];
+				boolean leftOver = false;
+				int curSize = 0;
+				int nInBuf = 0;
+				for(int i = 0; i < groups; i++){
+					tmpFiles[i] = new File(tmpDir.getAbsolutePath() + "/pre" +i);
+					if(!tmpFiles[i].exists())
+						tmpFiles[i].createNewFile();
+					writers[i] = new PrintWriter(new FileWriter(tmpFiles[i]));
+					
+					int nRead = 0;
+					nInBuf = 0; 
+					while ( (nRead = channel.read( buffer )) != -1 )
+					{
+					    if ( nRead == 0 )
+					        continue;
+					    buffer.position( 0 );
+					    buffer.limit( nRead );
+					    while( buffer.hasRemaining())
+					    {	
+					    	nInBuf = buffer.remaining();
+					    	/**
+					    	 * As long as there is value in the buffer not mapped to application
+					    	 * While adding it into the destination buffer will exceed memory limit
+					    	 * take it as leftover and make it the first bytes for the next round 
+					    	 */
+					    	if(curSize + nInBuf > memoryLimit){
+					    		leftOver = true;
+					    		break;
+					    	}
+					        buffer.get( barray, curSize, nInBuf);
+					    	curSize += nInBuf;
+					    }
+					    if(leftOver)
+					    	break;
+					    
+					    buffer.clear();
 					}
-					ArrayUtil.quickSortRandom(list, 0, list.length - 1);
-					for(int index = 0; index < values.length; index++){
-						writers[i].write(Long.toString(list[index]) + "\n");
+					
+					if(curSize == memoryLimit)
+						leftOver = false;
+					/**
+					 * Find the last delimiter in the buffer and calculate the offset
+					 * Always make the string end with delimiter and thus guarantee the data integrity
+					 */
+					int offset = findLastDelimiter(barray, curSize - 1);
+					curSize -= offset;
+					String value = new String(barray, 0, curSize, "US-ASCII");
+					String[] values = value.split(DELIMITER);
+					
+					if(isNum){
+						Long[] list = new Long[values.length]; 
+						for(int index = 0; index < values.length; index++){
+							list[index] = Long.parseLong(values[index]);
+						}
+						ArrayUtil.quickSortRandom(list, 0, list.length - 1);
+						for(int index = 0; index < values.length; index++){
+							writers[i].write(Long.toString(list[index]) + "\n");
+						}
+					}else{
+						ArrayUtil.quickSortRandom(values, 0, values.length - 1);
+						for(int index = 0; index < values.length; index++){
+							writers[i].write(values[index] + "\n");
+						}
 					}
-				}else{
-					ArrayUtil.quickSortRandom(values, 0, values.length - 1);
-					for(int index = 0; index < values.length; index++){
-						writers[i].write(values[index] + "\n");
+					
+					moveBytes(barray, curSize, 0, offset);
+					curSize = offset;
+					if(leftOver){
+						while( buffer.hasRemaining())
+					    {	
+					    	nInBuf = buffer.remaining();
+					        buffer.get( barray, curSize, nInBuf);
+					    	curSize += nInBuf;
+					    }
+				    	buffer.clear();
+					}
+				}//end for for loop for each tmp file
+			}//end for using NIO
+			else{
+				inputIO = new FileReader( file.getName() );
+				BufferedReader reader = new BufferedReader(inputIO);
+				for(int i = 0; i < groups; i++){
+					tmpFiles[i] = new File(tmpDir.getAbsolutePath() + "/pre" +i);
+					if(!tmpFiles[i].exists())
+						tmpFiles[i].createNewFile();
+					writers[i] = new PrintWriter(new FileWriter(tmpFiles[i]));
+					
+					if(isNum){
+						ArrayList<Long> list = new ArrayList<Long>(memoryLimit/8);
+						String cur = null;
+						while((cur = reader.readLine()) != null && list.size() <= memoryLimit/8){
+							list.add(Long.parseLong(cur));
+						}
+						Collections.sort(list);
+						for(long num : list){
+							writers[i].write(num + "\n");
+						}
+					}else{
+						LinkedList<String> list = new LinkedList<String>();						
+						String cur = null;
+						int byteCount = 0;
+						while((cur = reader.readLine()) != null && byteCount <= memoryLimit){
+							list.add(cur);
+							byteCount += cur.length();
+						}
+						Collections.sort(list);
+						for(String str : list){
+							writers[i].write(str + "\n");
+						}
 					}
 				}
-				
-				moveBytes(barray, curSize, 0, offset);
-				curSize = offset;
-				if(leftOver){
-					while( buffer.hasRemaining())
-				    {	
-				    	nInBuf = buffer.remaining();
-				        buffer.get( barray, curSize, nInBuf);
-				    	curSize += nInBuf;
-				    }
-			    	buffer.clear();
-				}
-							
+				reader.close();
 			}
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -254,6 +318,7 @@ public class FileBasedUtil{
 			int seqDegree){
 		if(files == null)
 			return null;
+		System.out.println("merging" + files.length + " to " +outputPath);
 		
 		int groups = files.length;
 		
@@ -279,8 +344,8 @@ public class FileBasedUtil{
 			writer = new PrintWriter(new FileWriter(outputFile));
 			
 			Long[] buffer = new Long[groups]; 
-//			MyArrayHeap<Long> heap = new MyArrayHeap<Long>(buffer, true, false);
-			PriorityQueue<Long> heap = new PriorityQueue<Long>();
+			MyArrayHeap<Long> heap = new MyArrayHeap<Long>(buffer, true, false);
+//			PriorityQueue<Long> heap = new PriorityQueue<Long>();
 			HashMap<Long, Integer> refMap = new HashMap<Long, Integer>();
 			
 			String curStr = null;
@@ -288,33 +353,36 @@ public class FileBasedUtil{
 			int listIndex = 0;
 			for(int i = 0; i < groups; i++){
 				curValue = Long.parseLong(readers[i].readLine());
-//				heap.insert(curValue);
-				heap.add(curValue);
+				heap.insert(curValue);
+//				heap.add(curValue);
 				refMap.put(curValue, i);
 			}
 			
-			while(!dataFlag.isAllClear()){
+			while(true){//(!dataFlag.isAllClear())
 				curValue = heap.peek();
 				listIndex = refMap.get(curValue);
-//				heap.delete();
-				heap.remove();
+				heap.delete();
+//				heap.remove();
 				refMap.remove(curValue);
 				writer.write(curValue + "\n");
 				
 				curStr = readers[listIndex].readLine();
-				System.out.println(curStr + " " + listIndex);
+//				System.out.println(curStr + " " + listIndex);
 				if(curStr == null){
 					dataFlag.clearBit(listIndex);
 					if(heap.size() > 0)
 						continue;					
 					else{
 						listIndex = dataFlag.getFirstSetBit();
+						/* if all empty */
+						if(listIndex == -1)
+							break;
 						curStr = readers[listIndex].readLine();
 					}
 				}				
 				curValue = Long.parseLong(curStr);
-//				heap.insert(curValue);
-				heap.add(curValue);
+				heap.insert(curValue);
+//				heap.add(curValue);
 				refMap.put(curValue, listIndex);
 			}
 			//TODO
@@ -340,6 +408,9 @@ public class FileBasedUtil{
 		return outputFile;
 	}
 	
+	/**
+	 * Really bad idea to compare two long number as string
+	 */
 	public static class longStrComparator implements Comparator<String>{
 		@Override
 		public int compare(String s1, String s2) {
@@ -464,13 +535,12 @@ public class FileBasedUtil{
 			return;
 		int fileSizeInByte = (int)file.length();
 		
-		/**
-		 * Directly retrieve data from file to application buffer
-		 */
 		Scanner in = null;
 		BufferedReader reader = null;
+		PrintWriter writer = null;
 		try{
 			reader = new BufferedReader(new FileReader(file));
+			writer = new PrintWriter(new FileWriter(file));
 			if(useScanner)
 				in = new Scanner(reader).useDelimiter("\\r|\\n");
 			
@@ -487,8 +557,11 @@ public class FileBasedUtil{
 					}
 				}
 				Collections.sort(list);
-				int printOutSize = list.size()/100 > 1000 ? 1000 : list.size()/100;
-				ArrayUtil.printSubArray(list, 0, printOutSize);
+//				int printOutSize = list.size()/100 > 1000 ? 1000 : list.size()/100;
+//				ArrayUtil.printSubArray(list, 0, printOutSize);
+				for(Integer i : list){
+					writer.write(i + "\n");
+				}
 			}else{
 				ArrayList<String> list = new ArrayList<String>(fileSizeInByte/8);
 				if(useScanner){
@@ -502,8 +575,11 @@ public class FileBasedUtil{
 					}
 				}
 				Collections.sort(list);
-				int printOutSize = list.size()/100 > 1000 ? 1000 : list.size()/100;
-				ArrayUtil.printSubArray(list, 0, printOutSize);
+//				int printOutSize = list.size()/100 > 1000 ? 1000 : list.size()/100;
+//				ArrayUtil.printSubArray(list, 0, printOutSize);
+				for(String i : list){
+					writer.write(i + "\n");
+				}
 			}
 			
 		}catch(Exception ex){
@@ -514,6 +590,8 @@ public class FileBasedUtil{
 			try{
 				if(reader != null)
 					reader.close();
+				if(writer != null)
+					writer.close();
 			}catch(Exception ex){
 				ex.printStackTrace();
 			}

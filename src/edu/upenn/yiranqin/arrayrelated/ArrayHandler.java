@@ -1,5 +1,6 @@
 package edu.upenn.yiranqin.arrayrelated;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -16,9 +17,73 @@ public class ArrayHandler {
 		HashSet<Integer> set = new HashSet<Integer>();
 		set.add(0);
 		
-
 //		selectionKTest();
-				
+//		profitTest();
+		arrayUtilTest();
+	}
+	
+	public void arrayUtilTest(){
+		int[] test1 = {-1, 2,-5, 2, -1, 15, -8, -6, 5, 2, 3};
+		int[] test2 = {-1, -2, -4, 0, -5};
+		
+		ArrayUtil.printArray(ArrayUtil.maxContinuousSubArray(test1));
+		ArrayUtil.printArray(ArrayUtil.maxContinuousSubArray(test2));
+		
+		
+		int[] array = ArrayUtil.generateRandomArray(15);
+		ArrayUtil.shuffleArray(array);
+		ArrayUtil.printArray(array);
+		ArrayUtil.findPairsToSum(array, 10);
+
+    	ArrayList<int[]> list = ArrayUtil.findContinuousSubArrayToSumWithSize(array, 10, 2);
+    	for(int[] subarray : list){
+    		ArrayUtil.printArray(subarray);
+    	}
+    	
+    	Integer[] testArray1 = ArrayUtil.generateIntegerArray(5, 10);
+    	ArrayUtil.shuffleArray(testArray1);
+    	ArrayUtil.printArray(testArray1);
+    	Integer[] testArray2 = ArrayUtil.generateIntegerArray(8, 10);
+    	ArrayUtil.shuffleArray(testArray2);
+    	ArrayUtil.printArray(testArray2);
+    	ArrayUtil.printArray(ArrayUtil.longestCommonContinuousSubset(testArray1, testArray2));
+    	ArrayUtil.printArray(ArrayUtil.longestCommonSequence(testArray1, testArray2));
+    	ArrayUtil.printArray(ArrayUtil.longestIncreasingSequence(testArray1));
+    	ArrayUtil.printArray(ArrayUtil.powerSet(new Integer[]{1,2,4, 3,1,1}));
+    	
+    	Integer[] array1 = {1};
+    	for(int i = 2; i <= 12; i++){
+    		int start = array1.length + 1;
+    		Integer[] array2 = ArrayUtil.generateIntegerArray(start, i);
+    		ArrayUtil.shuffleArray(array2);
+    		array1 = ArrayUtil.concatenateArrays(array1, array2);
+    	}
+    	array1 = ArrayUtil.concatenateArrays(array1, ArrayUtil.generateIntegerArray(array1.length + 1, 7));
+    	ArrayUtil.printArray(array1);
+    	
+    	System.out.println(ArrayUtil.searchBucketOrderedArray(array1, 36));
+    	
+	}
+	
+	public void profitTest(){
+		int[] B = {-2,4,30,-50,90,-60,100,120};
+    	int[] C = {90,190,10,90};
+    	int[] D = {190,90,10,90};
+    	int[] E = {10,90,90,190};
+    	int[] F = {80,70};
+    	System.out.println("The maximum of profit is: " + ArrayUtil.findMaxProfitSingleTransaction(B));
+    	System.out.println(ArrayUtil.maxDiffRightToLeft(B));	
+    	System.out.println("The maximum of profit is: " + ArrayUtil.findMaxProfitSingleTransaction(C));
+    	System.out.println(ArrayUtil.maxDiffRightToLeft(C));
+    	System.out.println("The maximum of profit is: " + ArrayUtil.findMaxProfitSingleTransaction(D));
+    	System.out.println(ArrayUtil.maxDiffRightToLeft(D));
+    	System.out.println("The maximum of profit is: " + ArrayUtil.findMaxProfitSingleTransaction(E));
+    	System.out.println(ArrayUtil.maxDiffRightToLeft(E));
+    	System.out.println("The maximum of profit is: " + ArrayUtil.findMaxProfitSingleTransaction(F));
+    	System.out.println(ArrayUtil.maxDiffRightToLeft(F));
+    	
+    	int[] test = {2, 4, 1, 16, 7, 5, 11, 9};
+    	System.out.println(ArrayUtil.maxDiffLeftToRight(test));	
 	}
 	
 	public void sortingPerformanceTest(){
@@ -258,7 +323,8 @@ public class ArrayHandler {
 	}
 	
 	/**
-	 * If do this in C/C++, there will be memory leak
+	 * If do this in C/C++, there is a possible memory leak since what reference originally point to is not freed
+	 * but in Java this won't work, nothing happens after the scope of this program 
 	 * @param reference
 	 */
 	public void assignNew(byte[] reference){

@@ -23,7 +23,7 @@ public class ScaleHandler {
 //		String filePath = "start^% 1, num^% 1000, isInOrder^%false, hasDup^%false, mask^%[332]";
 //		String filePath = "start^% 1, num^% 2500000, isInOrder^%false, hasDup^%false, mask^%[332]";
 		File file = new File(filePath);
-		FileBasedUtil.externalSort(file, 10);
+		FileBasedUtil.externalSort(file, 1, false, false);
 	}
 	
 	/**

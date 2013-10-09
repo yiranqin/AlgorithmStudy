@@ -156,6 +156,33 @@ public class BitManipulationUtil {
 		return ((value & 0xaaaaaaaa) >> 1) | ((value & 0x55555555) << 1);
 	}
 	
+	/**
+	 * rotateShiftLeft for numBits, no limit on numBits
+	 * Should take special caution negative numbers
+	 * 11111111111111111111111111111111 >> 1 = 11111111111111111111111111111111
+	 * 
+	 * @param value
+	 * @param numBits
+	 * @return
+	 */
+	public static int rotateShiftLeft(int value, int numBits){
+		if((numBits &= 31) == 0) // this is basically numBits = numBits % 32, more rounds makes no difference
+			return value;
+		if(value > 0)
+			return (value << numBits) | (value >> (32 - numBits));
+		else
+			return (value << numBits) | ((value >> (32 - numBits)) & ((1 << numBits) - 1));
+	}
+	
+	public static int rotateShiftRight(int value, int numBits){
+		if((numBits &= 31) == 0)
+			return value;
+		if(value > 0)
+			return (value >> numBits) | (value << (32 - numBits));
+		else
+			return ((value >> numBits) & (((1 << (32 - numBits)) - 1))) | (value << (32 - numBits));
+	}
+	
 	public static int fecthJBit(int a, int j){
 		if(j > 31 || j < 0)
 			return -1;
@@ -188,10 +215,10 @@ public class BitManipulationUtil {
 		int bit = 0;
 		while(bit < 32 && (list0.size() > 0 || list1.size() > 0)){
 			if(list0.size() > list1.size()){
-				result |= 1<<bit;
+				result |= 1 << bit;
 				tmp = list1;								
 			}else{
-				result |= 0<<bit;
+				result |= 0 << bit;
 				tmp = list0;
 			}
 			bit++;
@@ -307,19 +334,6 @@ public class BitManipulationUtil {
 		return screen;
 	}	
 	
-	public static int findMissingIntegerInIncreasingSequence(int[] array, int start, int end){
-		int result = 0;
-		for(int i = start; i <= end; i++){
-			result ^= i;
-		}
-		
-		for(int i : array){
-			result ^= i;
-		}
-		
-		return result;
-	}
-	
 	public static int findOnlyIntegerAppearOnce(int[] array){
 		int result = 0;
 		for(int i : array){
@@ -334,15 +348,17 @@ public class BitManipulationUtil {
 		for(int i : array){
 			all ^= i;
 		}
-		int bit = getFirstOneBit(all);
+//		int bit = getHighestOneBit(all);
+		int k = all - (all & (all - 1)); //clear all other set bits except for the first one  
 		
 		int part = 0;
 		for(int i : array){
-			if((i & (1 << bit))  > 0)
+//			if((i & (1 << bit))  > 0)
+			if((i & k)  > 0)
 				part ^= i;
 		}
 		
-		int[] result = new int[]{part, all^part};
+		int[] result = new int[]{part, all ^ part};
 		return result;
 	}
 	
@@ -399,7 +415,7 @@ public class BitManipulationUtil {
 	}
 	
 	/**
-	 * Keep the last one bit for the number
+	 * Keep the first one bit for the number
 	 * @param num
 	 * @return
 	 */
@@ -407,7 +423,7 @@ public class BitManipulationUtil {
 		return num & ~(num - 1);
 	}
 	
-	public static int getFirstOneBit(int num){
+	public static int getHighestOneBit(int num){
 		int bit = 0;
 		while(num > 0){
 			if((num & 1) > 0)
@@ -420,6 +436,78 @@ public class BitManipulationUtil {
 	
 	public static boolean isPowerOfTwo(int num){
 		return (num & (num - 1)) == 0;
+	}
+	
+	/**
+	 * find the only missing number of array of integers from start to end
+	 */
+	public static int findMissingIntegerInIncreasingSequence(int[] array, int start, int end){
+		int result = 0;
+		for(int i = start; i <= end; i++){
+			result ^= i;
+		}
+		
+		for(int i : array){
+			result ^= i;
+		}
+		
+		int number = result ^ (end + 1);
+		/**
+		 * When number is end + 1, it is possible that either 0 is missing or there is no missing number 
+		 */
+		return (number == end + 1) ? ((start == 0)?0 : number) : result;
+	}
+	
+	/**
+	 * find the only two missing numbers of array of integers from start to end
+	 * @param array
+	 * @param start
+	 * @param end
+	 * @return
+	 */
+	public static int[] findMissingTwoIntegersInIncreasingSequence(int[] array, int start, int end){
+		int all = 0;
+		for(int i = start; i <= end; i++){
+			all ^= i;
+		}
+		
+		for(int i : array){
+			all ^= i;
+		}
+		
+		System.out.println(all);
+		// now number will be miss1^miss2
+	    // these two number has at least one bits to be different, take only one single bit into consideration
+	    // find the binary 1 in number   
+	    int k = all - (all & (all-1));
+	    int[] result = new int[2];
+		
+	    //divide the groups into two depends on this certain bit, do the search another time during the new group
+	    for (int i = 0; i < array.length; i++){
+	    	int tmp = start + i;
+	        if ((tmp & k) == 0)   
+	            result[0] ^= tmp;   
+	        if ( (array[i] & k) == 0 )   
+	            result[0] ^= array[i];   
+	    }
+	    /**
+	     * There is no chance that two consecutive number share the same lowest bit
+	     */
+	    if ((end & k) == 0 )   
+	        result[0] ^= end;   
+	    if ( ((end - 1) & k) == 0 )   
+	        result[0] ^= end - 1;
+	    
+	    /**
+	     * When k is zero, no two digit differ, so in this case means no missing digits from start to end
+	     */
+	    result[1] = all ^ result[0];
+	    if(k == 0){
+	    	result[0] = end + 1;
+	    	result[1] = end + 2;
+	    }
+	    
+		return result;
 	}
 	
 	public static int countSetBits(int num){

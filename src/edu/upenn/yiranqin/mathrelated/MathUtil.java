@@ -98,7 +98,8 @@ public class MathUtil {
 	
 	/**
 	 * 17.3
-	 * Number of trailing zeros equals to number of 2 and 5 factors pairs,
+	 * Number of trailing zeros in n factorial
+	 * which equals to number of 2 and 5 factors pairs,
 	 * which is also number of factors of 5
 	 * @param n
 	 * @return
@@ -581,8 +582,6 @@ public class MathUtil {
 			count += countDigitMInRangeNCombination(n % (int)Math.pow(10, len-1), m); 
 		}
 		
-		
-		
 		return count;
 	}	
 	
@@ -785,6 +784,12 @@ public class MathUtil {
 		
 	}
 	
+	/**
+	 * Assumes no overflow
+	 * @param base
+	 * @param power
+	 * @return
+	 */
 	public static double power(double base, int power){
 		if(power == 0)
 			return 1.0;
@@ -1139,5 +1144,36 @@ public class MathUtil {
 			ArrayUtil.swap(array, 1, 2);
 		}
 		return array;
+	}
+	
+	/**
+	 * Reverse Given Number
+	 * @param num
+	 * @return
+	 */
+	public static int reverseNumber(int num){
+		int m = 0;
+		while(num > 0){
+			m = m * 10 + num % 10;
+			num /= 10;
+		}
+		return m;
+	}
+	
+	/**
+	 * Find all Quirky Numbers(sum of first 3 digits equal to that of the latter 3) of 6 digits
+	 */
+	public static void findQuirkyNumbers(){
+		for(int i = 100000; i < 999999; i++){
+			int[] a = new int[6];
+			int mod = i;
+			for(int j = 0; j < 6; j++){
+				a[j] = mod % 10;
+				mod = mod / 10;
+			}
+			if(a[0] + a[1] + a[2] == a[3] + a[4] + a[5]){
+				System.out.println(i);
+			}
+		}
 	}
 }

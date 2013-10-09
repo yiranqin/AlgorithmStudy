@@ -1,8 +1,13 @@
 package edu.upenn.yiranqin.arrayrelated;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.List;
 
 public class ArrayUtil{
@@ -59,10 +64,31 @@ public class ArrayUtil{
 		System.out.println(buffer.toString());
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static <T extends Object>
 	void printArray(List<T> array){
 		if(array == null)
 			return;
+		
+		int len = array.size();
+		StringBuffer buffer = new StringBuffer();
+		buffer.append('[');
+		for(int i = 0; i < len - 1; i++){
+			if(array.get(i) instanceof List<?>)
+				buffer.append(toListString((List<T>) array.get(i)));
+			else
+				buffer.append(array.get(i) + ",");
+		}
+		if(len > 0)
+			buffer.append(array.get(len - 1));
+		buffer.append(']');
+		System.out.println(buffer.toString());
+	}
+	
+	public static <T extends Object>
+	String toListString(List<T> array){
+		if(array == null)
+			return null;
 		
 		int len = array.size();
 		StringBuffer buffer = new StringBuffer();
@@ -73,7 +99,7 @@ public class ArrayUtil{
 		if(len > 0)
 			buffer.append(array.get(len - 1));
 		buffer.append(']');
-		System.out.println(buffer.toString());
+		return buffer.toString();
 	}
 	
 	public static String toArrayString(int[] array){
@@ -169,6 +195,22 @@ public class ArrayUtil{
 		return buffer.toString();
 	}
 	
+	public static <T extends Object>
+	T[] concatenateArrays(T[] array1, T[] array2){
+		if(array1 == null && array2 == null)
+			return null;
+		else if(array1 == null)
+			return array2;
+		else if(array2 == null)
+			return array1;
+		
+		T[] newArray = Arrays.copyOf(array1, array1.length + array2.length);
+		for(int i = 0; i < array2.length; i++){
+			newArray[array1.length + i] = array2[i];
+		}
+		return newArray;
+	}
+	
 	public static void swap(int[] array, int i, int j){
 		if(i != j){
 			array[i] = array[i] ^ array[j];
@@ -183,6 +225,12 @@ public class ArrayUtil{
 			array[j] = array[i] ^ array[j];
 			array[i] = array[i] ^ array[j];
 		}
+	}
+	
+	public static void swap(char[] array, int i, int j){
+		char temp = array[i];
+		array[i] = array[j];
+		array[j] = temp;
 	}
 	
 	public static <T extends Object>
@@ -200,7 +248,7 @@ public class ArrayUtil{
 	}
 	
 	/**
-	 * Generate increasing order array from 1 to size
+	 * Generate increasing order array from start with up size elements
 	 * @param size
 	 * @return
 	 */
@@ -225,7 +273,8 @@ public class ArrayUtil{
 	}
 	
 	/**
-	 * Since there is not guarantee that how many elements from start to start + end in mask
+	 * Generate from start with up to size elements
+	 * Since there is no guarantee that how many elements within mask
 	 * So we just use a tmp array and copy it back
 	 * 
 	 * @param start
@@ -234,8 +283,9 @@ public class ArrayUtil{
 	 * @return
 	 */
 	public static int[] generateArrayWithMask(int start, int size, int[] mask){
-		if(start + size > Integer.MAX_VALUE || size < 0 ||
-				 mask.length < 1 || mask == null || mask.length > size)
+		if(mask == null || mask.length < 1)
+			return generateArray(start, size);
+		if(start + size > Integer.MAX_VALUE || size < 0 || mask.length > size)
 			return null;
 		
 		int[] tmp = new int[size];
@@ -247,8 +297,8 @@ public class ArrayUtil{
 			}
 		}
 		
-		int[] array = new int[index + 1];
-		for(int i = 0; i <= index; i++){
+		int[] array = new int[index];
+		for(int i = 0; i < index; i++){
 			array[i] = tmp[i];
 		}
 		return array;
@@ -1363,5 +1413,519 @@ public class ArrayUtil{
 			height++;
 		
 		return --height;
+	}
+	
+	/**
+	 * get the full permutation as a list given an array 
+	 * @param array
+	 * @return
+	 */
+	public static <T extends Comparable<? super T>>
+	LinkedList<T[]> fullPermutation(T[] array){
+		LinkedList<T[]> result = null;
+		if(array == null)
+			return result;
+		
+		result = new LinkedList<T[]>();
+		
+		fullPermutationRecursively(array, 0, array.length - 1, result);		
+		return result;
+	}
+	
+	private static <T extends Comparable<? super T>>
+	void fullPermutationRecursively(T[] array,
+			int start, int end, LinkedList<T[]> result){
+		if(start > end)
+			return;
+		else if(start == end){
+			result.add(array.clone());
+		}
+		
+		for(int i = start; i <= end; i++){
+			if(array[start].equals(array[i]) && start != i)
+				continue;
+			ArrayUtil.swap(array, start, i);
+			fullPermutationRecursively(array, start + 1, end, result);
+			ArrayUtil.swap(array, start, i);
+		}		
+	}
+	
+	/**
+	 * A more general Implementation of all subset of a certain array
+	 * @param array
+	 * @return
+	 */
+	public static <T extends Comparable<? super T>>
+	List<ArrayList<T>> powerSet(T[] array){
+		if(array == null)
+			return null;
+		
+		quickSortRandom(array, 0, array.length - 1);
+		ArrayList<T> distinctEles = new ArrayList<T>();
+		ArrayList<Integer> occurNum = new ArrayList<Integer>();
+		
+		for(int i = 0; i < array.length; i++){
+			int count = 1;
+			while(i + 1 < array.length && array[i] == array[i+1]){
+				count++;
+				i++;
+			}
+			distinctEles.add(array[i]);
+			occurNum.add(count);			
+		}
+		
+		LinkedList<ArrayList<T>> allNumLists = new LinkedList<ArrayList<T>>();
+		allNumLists.add(null);
+		
+		for(int elementNum = 1; elementNum <= array.length; elementNum++){
+			ArrayList<T> curResult = new ArrayList<T>(elementNum);
+			for(int i = 0; i < elementNum; i++){
+				curResult.add(null);
+			}
+			powerSetRecursively(distinctEles, occurNum, elementNum, 0,
+					0, allNumLists, curResult);
+		}
+		
+		return allNumLists;
+	}
+	
+	private static <T extends Comparable<? super T>>
+	void powerSetRecursively(ArrayList<T> distinctEles, ArrayList<Integer> occurNum,
+			int elementNum, int curEleNum, int start, 
+			LinkedList<ArrayList<T>> curNumList, ArrayList<T> curResult){
+		/** if the current element number equals to the current level element number
+		 * this will be a result
+		 */
+		if(curEleNum == elementNum){
+			ArrayList<T> tmp = new ArrayList<T>();
+			tmp.addAll(curResult);
+			curNumList.add(tmp);
+			return;
+		}
+		
+		for(int i = start; i < distinctEles.size(); ++i){
+			/* if the in order current element still not fully used
+			 * it will be a valid candidate and thus included in the result
+			 **/
+			if(occurNum.get(i) > 0){
+				occurNum.set(i, occurNum.get(i) - 1);
+				/* update the number of the rest of this element */
+				curResult.set(curEleNum, distinctEles.get(i));
+				/**
+				 * The key for this recursion to succeed is start
+				 * Sine we want to use as more lower indexed elements as possible first
+				 * And then use the same strategy recursively to higher indexed elements
+				 * 
+				 * Do not update start until either all lower indexed ones are used
+				 *  or already reached the length limit  
+				 */
+				powerSetRecursively(distinctEles, occurNum, elementNum, curEleNum + 1,
+						i, curNumList, curResult);
+				occurNum.set(i, occurNum.get(i) + 1);
+			}
+		}
+	}
+	
+	/**
+	 * Find the continuous sub-array that render the sum maximum
+	 * Since there is no way to always keep track of the maximum from and to 
+	 * So we need a table to look up by maxSum
+	 * 
+	 * @param array
+	 * @return
+	 */
+	public static int[] maxContinuousSubArray(int[] array){
+		if(array == null)
+			return null;
+		
+		int from = 0;
+		int to = 0;
+		long sum = 0, maxSum = 0;
+		int maxValue = Integer.MIN_VALUE;
+		HashMap<Long, int[]> map = new HashMap<Long, int[]>();
+		
+		for (int i = 0; i < array.length; i++) {
+			sum += array[i];
+			to = i; // RANGE OF MAXIMUM SUB ARRAY TILL THIS POSITION
+			if (sum > maxSum) {
+				maxSum = sum;
+				map.put(new Long(maxSum), new int[]{from, to});
+			}else if (sum < 0) {
+				from = i + 1; // RANGE OF MAXIMUM SUB ARRAY STARTS FROM THIS POSITION.
+				sum = 0;
+			}
+			if(array[i] > maxValue)
+				maxValue = array[i];
+		}
+		
+		int[] result = null;
+		if(maxValue > 0){
+			int[] range = map.get(maxSum);
+			result = Arrays.copyOfRange(array, range[0], range[1] + 1);
+		}else 
+			result = new int[]{maxValue}; 
+ 		
+		return result;
+	}
+	
+	/**
+	 * find the max profit for a single transaction
+	 * (a.k.a find the largest different between right(max) and left(min))
+	 * 
+	 * @param array
+	 * @return
+	 */
+	public static int findMaxProfitSingleTransaction(int array[]){		
+		if(array == null || array.length < 2)
+			return 0;
+		
+		int profit = 0;
+		int protentialProfit = 0;
+		int smallest = array[0];
+		int potentialSmallest = array[0];
+		
+		for(int i = 1; i < array.length; i++){
+			protentialProfit = array[i] - potentialSmallest;
+			if(protentialProfit > profit){
+				smallest = potentialSmallest;
+				profit = protentialProfit;
+			}
+			if(array[i] > smallest && profit < array[i] - smallest){
+				profit = array[i] - smallest;
+			}
+			else if( array[i] < smallest ){
+				potentialSmallest = array[i];
+			}
+		}
+		return profit;
+	}
+	
+	public static int maxDiffRightToLeft(int array[]){
+		if(array == null || array.length < 2)
+			return 0;
+		int end = array.length - 1;
+		
+		int max = array[end];
+		int maxDiff = array[end] - array[end - 1];
+		
+		for(int i = end - 1; i >= 0; i--){
+			int diff = max - array[i];
+			if(diff > maxDiff)
+				maxDiff = diff;
+			
+			if(array[i] > max)
+				max = array[i];
+		}
+		
+		return (maxDiff < 0) ? 0 : maxDiff;
+	}
+	/**
+	 * find the largest different between left(max) and right(min)
+	 * @param array
+	 * @return
+	 */
+	public static int maxDiffLeftToRight(int array[]){
+		if(array == null || array.length < 2)
+			return 0;
+		
+		int max = array[0];
+		int maxDiff = array[0] - array[1];
+		
+		for(int i = 1; i < array.length; i++){
+			int diff = max - array[i];
+			if(diff > maxDiff)
+				maxDiff = diff;
+			
+			if(array[i] > max)
+				max = array[i];
+		}
+		
+		return (maxDiff < 0) ? 0 : maxDiff;
+	}
+	
+	/**
+	 * Find pairs within an array that sum to a certain number
+	 * No duplicate pairs
+	 * For example sum = 10, array = [1,9,9,1] should be two pairs, but [1, 9, 1] should be only one pair
+	 * Also, use index as value so that [5, 9, 1] will not emit 5,5 pair 
+	 * 
+	 * @param array
+	 * @param sum
+	 */
+	public static void findPairsToSum(int[] array, int sum){
+		if(array == null)
+			return;
+		
+		Hashtable<Integer,Integer> table = new Hashtable<Integer,Integer>();
+		int current = 0;
+		for(int i = 0; i < array.length; i++){
+			table.put((sum - array[i]), i);
+			if(table.get(array[i]) != null){
+				 current = table.get(array[i]);
+				 table.remove(array[i]);
+				 if(i != current){
+					 System.out.println("Pair "+ array[current] + " " + array[i] + " satisfied the condition");
+				 }
+			}
+		}
+	}
+	
+	/**
+	 * Find a sub-array that contains elements with sum and size k
+	 * @param A
+	 * @param sum
+	 * @param N
+	 * @param k
+	 * @return
+	 */
+	public static ArrayList<int[]> findContinuousSubArrayToSumWithSize(int[] array, int sum, int k){
+		if(k > array.length)
+			return null;
+			
+		int subsum = 0;
+		int i = 0;
+		ArrayList<int[]> result = new ArrayList<int[]>();
+		for(i = 0; i < k; i++){
+			subsum += array[i];
+		}
+		for(i = k - 1; i < array.length; i++){
+			subsum = (i > k-1) ? subsum + array[i] - array[i-k] : subsum;
+			if(subsum == sum){
+				result.add(Arrays.copyOfRange(array, i-(k-1), i + 1));
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * General Longest Common Continuous Subset  using DP	
+	 * @param array1
+	 * @param array2
+	 * @return
+	 */
+	public static <T extends Comparable<? super T>>
+	T[] longestCommonContinuousSubset(T[] array1, T[] array2){
+		if(array2 == null || array1 == null){
+			return null;
+		}
+		
+		final int M = array1.length;
+		final int N = array2.length;
+		int[][] L = new int[M][N];
+		int max = 0;
+		T[] common = null;
+		for(int i = 0; i < M; i++){
+			for(int j = 0; j < N; j++){
+				if(array1[i].equals(array2[j])){
+					if(i == 0 || j == 0){
+						L[i][j] = 1;
+					}
+					else{
+						L[i][j] = L[i-1][j-1] + 1;
+					}
+					if(L[i][j] > max){
+						max = L[i][j];
+					}
+					if(L[i][j] == max){
+						common = Arrays.copyOfRange(array1, i - max + 1, i + 1);
+					}
+				}
+				else L[i][j] = 0;
+			}
+		}
+		return common;
+	}
+	
+	/**
+	 * Longest Common Sub Sequence with tracing back of what exactly the sequence is
+	 * @param array1
+	 * @param array2
+	 * @return
+	 */
+	public static <T extends Comparable<? super T>>
+	List<T> longestCommonSequence(T[] array1, T[] array2){
+		if(array2 == null || array1 == null){
+			return null;
+		}
+		
+		final int M = array1.length;
+		final int N = array2.length;
+		int[][] L = new int[M + 1][N + 1];
+		List<T> common = new LinkedList<T>();
+		for(int i = 0; i <= M; i++){
+			for(int j = 0; j <= N; j++){
+				if(i == 0 || j == 0){
+					L[i][j] = 0;
+				}else{
+					if(array1[i - 1].equals(array2[j - 1])){
+						L[i][j] = L[i -1][j -1] + 1;
+					}
+					else L[i][j] = Math.max(L[i -1][j], L[i][j - 1]);
+				}
+			}
+		}
+		System.out.println(L[M][N]);
+//		backtrackLongestCommonSequence(L, array1, array2, M, N, common);
+		trackLongestCommonSequenceIteratively(L, array1, array2, M, N, common);
+		return common;
+	}
+
+	public static <T extends Comparable<? super T>>
+	void backtrackLongestCommonSequence(int[][] LCStable, T[] array1, T[] array2,
+			int i, int j, List<T> common){
+	    if( i == 0 || j == 0)
+	        return; 
+	    else if( array1[i - 1].equals(array2[j - 1])){
+	    	backtrackLongestCommonSequence(LCStable, array1, array2, i-1, j-1, common);
+	    	common.add(array1[i - 1]);
+	    }else{
+	    	if( LCStable[i][j-1] > LCStable[i-1][j])
+	    		backtrackLongestCommonSequence(LCStable, array1, array2, i, j-1, common);
+	    	else
+	    		backtrackLongestCommonSequence(LCStable, array1, array2, i-1, j, common);
+	    }
+	}
+	
+	public static <T extends Comparable<? super T>>
+	void trackLongestCommonSequenceIteratively(int[][] L, T[] array1, T[] array2,
+			int M, int N, List<T> common){
+		int s1position = M, s2position = N;
+		while (s1position != 0 && s2position != 0){
+			if (array1[s1position - 1].equals(array2[s2position - 1])){
+				common.add(array1[s1position - 1]);
+				s1position--;
+				s2position--;
+			}
+			else if (L[s1position][s2position - 1] >= L[s1position][s2position]){
+				s2position--;
+			}
+			else{
+				s1position--;
+			}
+		}
+		Collections.reverse(common);
+	}
+	
+	/**
+	 * longest increasing sub sequence
+	 * @param array
+	 * @return
+	 */
+	public static <T extends Comparable<? super T>>
+	List<T> longestIncreasingSequence(T[] array){
+		if(array == null){
+			return null;
+		}
+		
+		final int M = array.length;
+		int[] L = new int[M];
+		L[0] = 1;		
+		int len = L[0];
+		List<T> resultSeq = new LinkedList<T>();
+		for(int i = 1; i < M; i++){
+			L[i] = 1;
+			for(int j = 0; j < i; j++){
+				if(array[j].compareTo(array[i]) < 0){
+					L[i] = Math.max(L[i], L[j] + 1);
+				}
+			}				
+			len = Math.max(len, L[i]);
+		}
+		
+		int tmp = len;
+		for(int i = M - 1; i >= 0; i--){
+			if(tmp == L[i]){
+				resultSeq.add(array[i]);
+				tmp--;
+			}
+			if(tmp == 0)
+				break;
+		}
+		Collections.reverse(resultSeq);
+		System.out.println(len);
+		return resultSeq;
+	}
+	
+	/**
+	 * Search a given element within 
+	 * [[1][2][3][4[5]]
+	 * [1,2,3,6,5,4,9,7,8,10,11,12,15,13,14]
+	 * 
+	 * @param array
+	 * @param key
+	 * @return
+	 */
+	public static  <T extends Comparable<? super T>>
+	int searchBucketOrderedArray(T[] array, T key){
+		int totalBuckets = (int)Math.sqrt(array.length * 2);//calculate out the total buckets number
+		if(array.length != ((totalBuckets * (totalBuckets + 1))/2)){
+			System.out.println("The array provided is not full");
+		}
+		SearchResult result = searchBucketOrderedArray(array, key, 1, totalBuckets);
+		if(result.getIndex() < 0)
+			return -1;
+		else
+			return result.getIndex();
+	}
+	
+	private static  <T extends Comparable<? super T>>
+	SearchResult searchBucketOrderedArray(T[] array, T key, int startBucket, int endBucket){
+		if(startBucket > endBucket)
+			return new SearchResult(-1, false);
+		if(startBucket == endBucket)
+			return searchWithinBucket(array, key, startBucket);
+				
+		int elementsInRange = ((endBucket - startBucket + 1) * (startBucket + endBucket)) / 2;
+		int medianElementsInRange = elementsInRange/2;
+		int medianBucket = startBucket;
+		while(medianElementsInRange > 0 && medianBucket < endBucket){
+			medianBucket++;
+			medianElementsInRange -= medianBucket; 
+		}
+		SearchResult tmp = searchWithinBucket(array, key, medianBucket);
+		if(tmp.getIndex() > 0)
+			return tmp;
+		else if(tmp.searchHigher())
+			return searchBucketOrderedArray(array, key, medianBucket + 1, endBucket);
+		else
+			return searchBucketOrderedArray(array, key, startBucket, medianBucket - 1);
+	}
+	
+	private static  <T extends Comparable<? super T>>
+	SearchResult searchWithinBucket(T[] array, T key, int bucket){
+		int end = ((bucket * (bucket + 1)) / 2) - 1;
+		end = (end > array.length - 1) ? array.length - 1 : end;
+		
+		int start = ((bucket * (bucket + 1)) / 2) - bucket;
+		
+		int higherCount = 0;
+		for(int i = start; i <= end; i++){
+			if(array[i].equals(key))
+				return new SearchResult(i, false);
+			else if(array[i].compareTo(key) < 0)
+				higherCount++;
+		}
+		return (higherCount > 0) ? new SearchResult(-1, true) : new SearchResult(-1, false);
+	}
+	
+	/**
+	 * Result Wrapper such that if not in, then index will be -1, 
+	 * searchHigher indicating search higher half or the lower half
+	 */	
+	private static class SearchResult{
+		private int index;
+		private boolean searchHigher;
+		protected SearchResult(int index, boolean searchHigher){
+			this.index = index;
+			this.searchHigher = searchHigher;
+		}
+		
+		protected int getIndex(){
+			return index;
+		}
+		
+		protected boolean searchHigher(){
+			return searchHigher;
+		}
 	}
 }
