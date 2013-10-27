@@ -26,15 +26,16 @@ public class MathHandler {
 	}
 	
 	public void matrixTest(){
-//		int[][] matrix = MatrixUtil.generateNonDupMatrix(5, 5);
-//		MatrixUtil.printMatrix(matrix);
-//		System.out.println();
-//		MatrixUtil.printMatrixClockwise(matrix);
-//		MatrixUtil.printMatrixClockwiseRecursively(matrix, 0, 0, matrix[0].length - 1, matrix.length - 1, 0);
-////		MatrixUtil.rotateSquareMatrix(matrix);
-////		MatrixUtil.printMatrix(matrix);
-//		int[][] rotatedMatrix = MatrixUtil.rotateRandomMatrix(matrix);
-//		MatrixUtil.printMatrix(rotatedMatrix);
+		int[][] matrix = MatrixUtil.generateNonDupMatrix(5, 5);
+		MatrixUtil.printMatrix(matrix);
+		System.out.println();
+		MatrixUtil.printMatrixClockwise(matrix);
+		MatrixUtil.printMatrixClockwiseRecursively(matrix, 0, 0, matrix[0].length - 1, matrix.length - 1, 0);
+		MatrixUtil.rotateSquareMatrix(matrix);
+		MatrixUtil.printMatrix(matrix);
+		System.out.println();
+		int[][] rotatedMatrix = MatrixUtil.rotateRandomMatrix(matrix);
+		MatrixUtil.printMatrix(rotatedMatrix);
 		
 		MatrixUtil.nQueenPermutation(8);
 		MatrixUtil.nQueenBackTracking(8);
@@ -100,6 +101,9 @@ public class MathHandler {
 		
 		MathUtil.findQuirkyNumbers();
     	System.out.println(MathUtil.reverseNumber(432));
+    	
+    	System.out.println(MathUtil.sqrt(0.02));
+    	System.out.println(MathUtil.sqrt(9));
 	}
 	
 	public void findNthNumberComposedByThreePrimesTest(){

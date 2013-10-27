@@ -117,6 +117,7 @@ public class TreeUtil {
 		}
 		return -1;
 	}
+
 	/**
 	 * lowest common ancestor with assumption that a and b is no the ancestor of each other
 	 * @param a
@@ -146,6 +147,15 @@ public class TreeUtil {
 		else return (Math.max(Height(root.getLeftChild()), Height(root.getRightChild())) + 1);
 	}
 	
+	
+	public static <T extends Comparable<? super T>>
+	int minHeight(MyBSTNode<T> root){
+		if(root == null){
+			return -1;
+		}
+		else return (Math.min(minHeight(root.getLeftChild()), minHeight(root.getRightChild())) + 1);
+	}
+	
 	public static <T extends Object>
 	void traverseOrderLevel(MyBinaryTreeNode<T> node) {
 		if (node == null) return;
@@ -154,7 +164,7 @@ public class TreeUtil {
 		while (!thisLevel.isEmpty()) {
 			ArrayList<MyBinaryTreeNode<T>> nextLevel = new ArrayList<MyBinaryTreeNode<T>>();
 			for (MyBinaryTreeNode<T> n : thisLevel) {
-				System.out.print(n);
+				System.out.print(n + " ");
 				if (n.getLeftChild() != null) nextLevel.add(n.getLeftChild());
 				if (n.getRightChild() != null) nextLevel.add(n.getRightChild());
 			}
@@ -250,13 +260,13 @@ public class TreeUtil {
 
 	public static <T extends Comparable<? super T>>
 	boolean isBSTHelper(MyBinaryTreeNode<T> root, MyBinaryTreeNode<T> prev){	 
-		// traverse the tree in inorder fashion and keep track of prev node
+		// traverse the tree in in order fashion and keep track of prev node
 		if (root != null){
 			if (!isBSTHelper(root.getLeftChild(), prev)){
 				return false;
 			}
 	        // Allows only distinct valued nodes
-			if (prev != null && root.getData().compareTo( prev.getData()) <= 0)
+			if (prev != null && root.getData().compareTo( prev.getData()) < 0)
 				return false;
 			
 			prev = root;
@@ -274,7 +284,7 @@ public class TreeUtil {
 		if(root == null)
 			return true;
 		
-		if(root.getData() <= min || root.getData() > max)
+		if(root.getData() < min || root.getData() >= max)
 			return false;
 		
 		if(!isBSTMinMax(root.getLeftChild(), min, root.getData()) ||
@@ -342,7 +352,8 @@ public class TreeUtil {
 		}else{
 			depth = depth(root.getLeftChild(), x);
 			depth = (depth < 0) ? -1 : depth + 1;
-
+			/* assume nodes within the tree are distinct
+			 *  and can not appear on both left and right subtree*/
 			if(depth < 0){ 
 				depth = depth(root.getRightChild(), x);
 				depth = (depth < 0) ? -1 : depth + 1;
@@ -475,9 +486,14 @@ public class TreeUtil {
 		    }
 		}
 	}
-	 
+	
+	/**
+	 * Morris Traversal, this will temporally change the structure of the tree
+	 *  but revert the change after traversing the node
+	 * @param root
+	 */
 	public static <T extends Object>
-	void MorrisTraversal(MyBinaryTreeNode<T> root){
+	void MorrisTraversalInOrder(MyBinaryTreeNode<T> root){
 		MyBinaryTreeNode<T> current, pre;
 		current = root;
 
@@ -495,23 +511,142 @@ public class TreeUtil {
 				while(pre.getRightChild() != null && pre.getRightChild() != current)
 					pre = pre.getRightChild();
 	  
-				/* Make current as right child of its inorder predecessor */
+				/* Make current as right child of its in order predecessor */
 				if(pre.getRightChild() == null){
 					pre.setRightChild( current);
 					current = current.getLeftChild();
 				}
-	  
-				/* Revert the changes made in if part to restore the original
-	         	tree i.e., fix the right child of predecssor */
+				/* 
+				 * Revert the changes made in if part to restore the original
+	         	tree i.e., fix the right child of predecessor
+	         	*/
 				else
 				{
 					pre.setRightChild( null);
 					System.out.println("Data: "+ current);
 					current = current.getRightChild();
-				} /* End of if condition pre->right == NULL */
-			} /* End of if condition current->left == NULL*/
-		} /* End of while */
-	 }
+				} 
+			} 
+		}
+	}
+	
+	public static <T extends Object>
+	void MorrisTraversalPreOrder(MyBinaryTreeNode<T> root){
+		MyBinaryTreeNode<T> current, pre;
+		current = root;
+	
+		while(current != null)
+		{
+			if(current.getLeftChild() == null)
+			{
+				System.out.println("Data: "+ current);
+				current = current.getRightChild();
+			}
+			else
+			{
+				/* Find the in order predecessor of current */
+				pre = current.getLeftChild();
+				while(pre.getRightChild() != null && pre.getRightChild() != current)
+					pre = pre.getRightChild();
+	  
+				/* Make current as right child of its in order predecessor */
+				if(pre.getRightChild() == null){
+					System.out.println("Data: "+ current);
+					pre.setRightChild( current);
+					current = current.getLeftChild();
+				}
+				/* 
+				 * Revert the changes made in if part to restore the original
+	         	tree i.e., fix the right child of predecessor
+	         	*/
+				else
+				{
+					pre.setRightChild( null);
+					current = current.getRightChild();
+				} 
+			} 
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static <T extends Object>
+	void MorrisTraversalPostOrder(MyBinaryTreeNode<T> root){
+		MyBinaryTreeNode<T> dump = null;
+		if(root instanceof MyAVLTreeNode<?>)
+			dump = (MyBinaryTreeNode<T>) new MyAVLTreeNode<Integer>(null);
+		else if(root instanceof MyBSTNode<?>)
+			dump = (MyBinaryTreeNode<T>) new MyBSTNode<Integer>(null);
+		else if(root instanceof MyBinaryTreeNode<?>)
+			dump = new MyBinaryTreeNode<T>(null);
+		
+		MyBinaryTreeNode<T> current, pre;
+		dump.setLeftChild(root);
+		current = dump;
+	
+		while(current != null)
+		{
+			if(current.getLeftChild() == null)
+			{
+				current = current.getRightChild();
+			}
+			else
+			{
+				/* Find the in order predecessor of current */
+				pre = current.getLeftChild();
+				while(pre.getRightChild() != null && pre.getRightChild() != current)
+					pre = pre.getRightChild();
+	  
+				/* Make current as right child of its in order predecessor */
+				if(pre.getRightChild() == null){
+					pre.setRightChild(current);
+					current = current.getLeftChild();
+				}
+				/* 
+				 * Revert the changes made in if part to restore the original
+	         	tree i.e., fix the right child of predecessor
+	         	*/
+				else
+				{
+					printReverse(current.getLeftChild(), pre);
+					pre.setRightChild( null);
+					current = current.getRightChild();
+				} 
+			} 
+		}
+	}
+	
+	public static <T extends Object>
+	void reverse(MyBinaryTreeNode<T> from, MyBinaryTreeNode<T> to){
+		if(from == to)
+			return;
+		
+		MyBinaryTreeNode<T> x = from;
+		MyBinaryTreeNode<T> y = from.getRightChild();
+		MyBinaryTreeNode<T> z = null;
+		while(true){
+			z = y.getRightChild();
+			y.setRightChild(x);
+			x = y;
+			y = z;
+			if(x.getData().equals(to.getData()))
+				break;
+		}
+	}
+	
+	public static <T extends Object>
+	void printReverse(MyBinaryTreeNode<T> from, MyBinaryTreeNode<T> to){
+		reverse(from, to);
+		
+		MyBinaryTreeNode<T> current = to;
+		while(true){
+			System.out.println("Data: "+ current);
+			if(current.getData().equals(from.getData()))
+				break;
+			current = current.getRightChild();
+		}
+		
+		reverse(to, from);
+	}
 	
 	/**
 	 * @param Data
@@ -523,14 +658,86 @@ public class TreeUtil {
 		if(root != null){
 			successor(Data, root.getRightChild());
 			if(root.getRightChild() != null && root.getRightChild().getData().equals( Data)){
-					return root;
+				return root;
 			}
 			else if (root.getLeftChild() != null && root.getLeftChild().getData().equals( Data)){
-					return root;
+				return root;
 			}
 			successor(Data, root.getLeftChild());
 		}
 		return null;
+	}
+	
+	/**
+	 * Get the nth in order node of a BST, return immediately when found the node
+	 * Not a quite good way to do this, actually better use a stack, traverse in order and compare
+	 * 
+	 * @param root
+	 * @param n
+	 * @return
+	 */
+	public static <T extends Object>
+	MyBinaryTreeNode<T> nthNodeInOrder(MyBinaryTreeNode<T> root, int n){
+		return nthNodeInOrderHelper(root, n, 0).getNode();
+	}
+	
+	private static <T extends Object>
+	NodeResult<T> nthNodeInOrderHelper(MyBinaryTreeNode<T> root, int n, int counter){
+		if(root == null)
+			return new NodeResult<T>(null, counter);
+		
+		NodeResult<T> leftResult = nthNodeInOrderHelper(root.getLeftChild(), n, counter);
+		counter = leftResult.getCounter() + 1;
+		if(leftResult.getNode() != null)
+			return leftResult;
+		if(counter == n)
+			return new NodeResult<T>(root, counter);
+		 
+		return nthNodeInOrderHelper(root.getRightChild(), n, counter);
+	}
+	
+	private static class NodeResult<T extends Object>{
+		private MyBinaryTreeNode<T> node;
+		private int counter;
+		protected NodeResult(MyBinaryTreeNode<T> node, int counter){
+			this.node = node;
+			this.counter = counter;
+		}
+		
+		protected MyBinaryTreeNode<T> getNode(){
+			return node;
+		}
+		
+		protected int getCounter(){
+			return counter;
+		}
+	}
+	
+	/**
+	 * Get the nth largest node in a BST(nth node in reverse order)
+	 * @param root
+	 * @param n
+	 * @return
+	 */
+	public static <T extends Object>
+	MyBinaryTreeNode<T> nthNodeInReverseOrder(MyBinaryTreeNode<T> root, int n){
+		Stack<MyBinaryTreeNode<T>> stack = new Stack<MyBinaryTreeNode<T>>();
+		int counter = 0;
+		
+		while(root != null || !stack.empty()){
+			if(root != null){
+				stack.push(root);
+				root = root.getRightChild();
+			}else{
+				root = stack.pop();
+				counter ++;
+				if(counter == n)
+					break;
+				root = root.getLeftChild();
+			}
+		}
+		
+		return root;
 	}
 	
 	/**
@@ -699,6 +906,11 @@ public class TreeUtil {
 				isSameTree(root1.getRightChild(), root2.getRightChild());
 	}
 	
+	/**
+	 * Compute the diameter of a tree
+	 * @param root
+	 * @return
+	 */
 	public static <T extends Object>
 	int diameterOfTree(MyBinaryTreeNode<T> root){
 		if(root == null)
@@ -743,6 +955,74 @@ public class TreeUtil {
 			return diameter;
 		}
 	} 
+	
+	/**
+	 * convert a binary tree into a doubly linked list
+	 * @param root
+	 * @return the head of the converted linked list
+	 */
+	public static <T extends Object>
+	MyBinaryTreeNode<T> convertTreeToDoublyLinkedList(MyBinaryTreeNode<T> root){
+		if(root == null)
+			return null;
+		
+		MyBinaryTreeNode<T> head = convertTreeToCircularList(root);
+		MyBinaryTreeNode<T> tail = head.getLeftChild();
+		tail.setRightChild(null);
+		head.setLeftChild(null);
+		return head;
+	}
+	
+	/**
+	 * Convert a binary tree into a circular linked list
+	 * Convert left subtree
+	 * Convert right subtree
+	 * Concatenate left subtree, root and right subtree
+	 * 
+	 * @param root
+	 * @return
+	 */
+	public static <T extends Object>
+	MyBinaryTreeNode<T> convertTreeToCircularList(MyBinaryTreeNode<T> root){
+		if(root == null)
+			return null;
+		
+		MyBinaryTreeNode<T> left = convertTreeToCircularList(root.getLeftChild());
+		MyBinaryTreeNode<T> right = convertTreeToCircularList(root.getRightChild());
+
+		if(left == null && right == null){
+			root.setLeftChild(root);
+			root.setRightChild(root);
+			return root;
+		}
+		
+		MyBinaryTreeNode<T> tailRight = (right == null) ? null : right.getLeftChild(); 
+		
+		/* join left to root */
+		if(left == null){
+			concat(right.getLeftChild(), root);
+		}else{
+			concat(left.getLeftChild(), root);
+		}
+		
+		/* join right to root */
+		if(right == null)
+			concat(root, left);
+		else
+			concat(root, right);
+		
+		/* join right to left*/
+		if(right != null && left != null)
+			concat(tailRight, left);
+		
+		return (left == null) ? root  : left; //always return valid head of the sub list
+	}
+	
+	public static <T extends Object>
+	void concat(MyBinaryTreeNode<T> left, MyBinaryTreeNode<T> right){
+		left.setRightChild(right);
+		right.setLeftChild(left);
+	}
 	
 	/**
 	 * A printTree machinery mostly for debugging, take little concern regarding to performance

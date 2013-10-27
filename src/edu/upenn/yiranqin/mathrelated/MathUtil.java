@@ -10,6 +10,7 @@ import edu.upenn.yiranqin.scalabilityrelated.MyIntegerBitmap;
 
 public class MathUtil {
 	public static long invocation = 0;
+	public static final double epsilon = 0.00001;
 	
 	/**
 	 * Joseph ring, remove the mth from the circle at every time. Find the last remaining number 
@@ -94,6 +95,24 @@ public class MathUtil {
 		if(smaller == 0) return larger;
 		
 		return gcdRecursively(smaller, larger % smaller);
+	}
+	
+	/**
+	 * Binary search for square root of given number(could be >= 1 or < 1)
+	 * @param number
+	 * @return
+	 */
+	public static double sqrt(double number){
+		double left = 0.0;
+		double right = Math.max(number, 1);
+		while(left + epsilon < right){
+			double mid = (left + right) / 2.0;
+			if(mid * mid > number)
+				right = mid;
+			else
+				left = mid;
+		}
+		return left;
 	}
 	
 	/**

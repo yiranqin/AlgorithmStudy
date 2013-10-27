@@ -1,10 +1,20 @@
 package edu.upenn.yiranqin.stringrelated;
 
+import java.io.File;
+import java.util.HashMap;
 import java.util.LinkedList;
 
 import edu.upenn.yiranqin.arrayrelated.ArrayUtil;
+import edu.upenn.yiranqin.datastructures.MyTrie;
 
 public class StringUtil{
+	public static MyTrie dictionary = null;
+	static{
+		String filePath = "words";
+		File file = new File(filePath);
+		dictionary = DictionaryUtil.buildUpDictionaryTrie(file);
+	}
+	
 	/**
 	 * Full permutation of given string
 	 * @param str
@@ -301,6 +311,7 @@ public class StringUtil{
 		int i = 0; //the position of the current character in W
 		int sLen = S.length();
 		final int N = W.length();
+		
 		int[] T = new int[N];
 		/* the table used in KMP is the table used for backtracking where to start when a mismatch happens */
 		T =	KMPtable(T,W);
@@ -422,4 +433,261 @@ public class StringUtil{
 		}
 		return substrings;
 	}
+	
+	/**
+	 * Unconcatenate a long sentence(string) into a set of words with minimum unrecognized words 
+	 * @param sentence
+	 * @return
+	 */
+	public static String unconcatenateStringIntoWords(String sentence){
+		HashMap<Integer, ParseResult> cache = new HashMap<Integer, ParseResult>();
+		ParseResult result = unconcatenateStringIntoWords(0, 0, sentence, cache);
+		return result.parsed;
+	}
+	
+	private static ParseResult unconcatenateStringIntoWords(int wordStart, int wordEnd,
+			String sentence, HashMap<Integer, ParseResult> cache){
+		if(wordEnd >= sentence.length())
+			return new ParseResult(wordEnd - wordStart, sentence.substring(wordStart).toUpperCase());
+		
+		if(cache.containsKey(wordStart))
+			return cache.get(wordStart).clone();		
+		
+		String word = sentence.substring(wordStart, wordEnd + 1);
+		boolean validPrefix = dictionary.containsPrefix(word);
+		boolean validWord = validPrefix && dictionary.containsWord(word);
+		
+		ParseResult bestExact = unconcatenateStringIntoWords(wordEnd + 1, wordEnd + 1, sentence, cache);
+		if(validWord){
+			bestExact.parsed = word + " " + bestExact.parsed; 
+		}else{
+			bestExact.invalidCount += word.length();
+			bestExact.parsed = word.toUpperCase() + " " + bestExact.parsed;
+		}
+		
+		ParseResult bestExtend = null;
+		if(validPrefix){
+			bestExtend =unconcatenateStringIntoWords(wordStart, wordEnd + 1, sentence, cache);
+		}
+
+		ParseResult best = ParseResult.min(bestExact, bestExtend);
+		cache.put(wordStart, best.clone());
+		return best;
+	}
+	
+	private static class ParseResult{
+		public int invalidCount = Integer.MAX_VALUE;
+		public String parsed = "";
+		public ParseResult(int inv, String p){
+			invalidCount = inv;
+			parsed = p;
+		}
+		
+		public ParseResult clone(){
+			return new ParseResult(this.invalidCount, this.parsed);
+		}
+		
+		public static ParseResult min(ParseResult r1, ParseResult r2){
+			if(r1 == null)
+				return r2;
+			if(r2 == null)
+				return r1;
+			
+			return (r1.invalidCount < r2.invalidCount) ? r1 : r2; 
+		}
+	}
+	
+	/**
+	 * Eliminate Comments and treat the entire input as a single string
+	 * But really hard to eliminate newline this way
+	 *  as there must be a roll-back mechanism to eliminate the whitespace before all line comment
+	 * @param input
+	 * @return
+	 */
+	public static String eliminateCommentsByChar(String input){
+		boolean star = false;
+		boolean slash = false;
+		boolean deleteLine = false;
+		int curIndex = 0; 
+		int validIndex = 0; //keep track of the slot need to fill
+		char[] buffer = input.toCharArray();
+		
+		while(curIndex < buffer.length){
+			if(buffer[curIndex] == '/'){
+				curIndex++;
+				/* Only allow one of them to be set at a time */
+				if(!star && buffer[curIndex] == '/'){
+					slash = true;
+					if(isAllWhiteSpaceLeadingLine(buffer, curIndex - 2))
+						deleteLine = true;
+				}else if(!slash && buffer[curIndex] == '*'){
+					star = true;
+				}
+				/* Actually, for valid comment/code style, there must be * or / after /
+				 * Just in case for the invalid comment
+				 */
+				if((slash || star) && curIndex < buffer.length -1)
+					curIndex++;
+				else
+					curIndex--;
+			}
+			
+			if(slash){
+				if(buffer[curIndex] == '\n' || buffer[curIndex] == '\r'){
+					slash = false;					
+					if(deleteLine){
+						// Roll back to last newline
+						while(validIndex >= 0 && buffer[validIndex] != '\n' && buffer[validIndex] != '\r'){
+							validIndex--;
+						}
+						validIndex++;
+						if(curIndex != buffer.length -1)
+							curIndex++;
+						deleteLine = false;
+					}
+				}
+			}else if(star){
+				if(buffer[curIndex] == '*' && buffer[++curIndex] == '/'){
+					star = false;
+					curIndex++;
+					// At this point, we know that if the trailing of this line is all white space or newline
+					// we should roll back to last newline or last valid 
+					if(isAllWhiteSpaceTrailingLine(buffer, curIndex)){
+						validIndex--;
+						while(validIndex >= 0 && buffer[validIndex] != '\n' && buffer[validIndex] != '\r' 
+								&& (buffer[validIndex] == ' ' || buffer[validIndex] == '\t')){
+							validIndex--;
+						}
+						/* If the roll back destination is newline then move past the next newline to delete this line */
+						if(validIndex < 0 || buffer[validIndex] == '\n' || buffer[validIndex] == '\r'){
+							validIndex ++;
+							while(curIndex < buffer.length -1 && buffer[curIndex] != '\n' && buffer[curIndex] != '\r'){
+								curIndex++;
+							}
+							if(curIndex < buffer.length -1){
+								curIndex++;
+								if(buffer[curIndex] == '/')
+									continue;
+							}
+						}
+						/* if the roll back destination is valid*/
+						else{
+							validIndex++;
+						}
+					}
+				}
+			}
+			
+			if(!star && !slash){
+				buffer[validIndex] = buffer[curIndex];
+				validIndex++;
+			}
+			curIndex++;
+		}
+		return String.copyValueOf(buffer, 0, validIndex);
+	}
+	
+	public static boolean isAllWhiteSpaceLeadingLine(char[] array, int end){
+		if(end < 0 || end >= array.length)
+			return true;
+		while(end >= 0 && array[end] != '\n'){
+			if(array[end] != ' ' && array[end] != '\t')
+				return false;
+			end--;
+		}
+		return true;
+	}
+	
+	public static boolean isAllWhiteSpaceTrailingLine(char[] array, int start){
+		if(start < 0 || start >= array.length)
+			return true;
+		while(start < array.length && array[start] != '\n'){
+			if(array[start] != ' ' && array[start] != '\t')
+				return false;
+			start++;
+		}
+		return true;
+	}
+	
+	/**
+	 * Eliminate Comments in a line by line basis
+	 * But in this way, the original blank lines would be hard to keep
+	 * @param input
+	 * @return
+	 */
+	public static String eliminateCommentsByLine(String input){
+		boolean star = false;
+		boolean slash = false;
+		int slashIndex = 0;
+		int starStartIndex = 0;
+		int starEndIndex = 0;
+		//replace the original blank line with space so that it won't get screened out by split 
+		input.replaceAll("[\\t\\x0b\\f]*[\\n\\t]", " ");
+		String[] lines = input.split("[\\r\\n]");
+		StringBuilder result = new StringBuilder();
+		
+		for(String line : lines){
+			slashIndex = line.indexOf("//");
+			starStartIndex = line.indexOf("/*");
+			// end index is the last index for */ just in case the start is like /*//abc */
+			// but this way, also remove the actually invalid comment 
+			starEndIndex = line.lastIndexOf("*/");
+			char[] array = line.toCharArray();
+			/* Only allow the first one of them to be set at a time */
+			if(!star && slashIndex > -1){
+				if(starStartIndex < 0 || (starStartIndex > 0 && slashIndex < starStartIndex))
+					slash = true;
+			}
+			if(!slash && starStartIndex > -1){
+				if(slashIndex < 0 || (slashIndex > 0 && starStartIndex < slashIndex))
+					star = true;
+			}
+			
+			if(!star && !slash){
+				result.append(line);
+				result.append("\n");
+			}
+			
+			if(slash){
+				if(!isAllWhiteSpaceLeadingLine(array, slashIndex - 1)){
+					result.append(line.subSequence(0, slashIndex));
+					result.append("\n");
+				}
+				slash = false;
+			}else if(star){
+				/* If the star comment for a single line */				
+				if(starStartIndex > -1 && starEndIndex > -1){
+					boolean allWhiteTrailing = isAllWhiteSpaceTrailingLine(array, starEndIndex + 2);
+					boolean allWhiteLeading	= isAllWhiteSpaceLeadingLine(array, starStartIndex - 1);
+					/* Only add to the result if there is some valid part */
+					if(!allWhiteLeading && allWhiteTrailing){
+						result.append(line.substring(0, starStartIndex));
+						result.append("\n");
+					}
+					/* Carve out the commented part */
+					else if(allWhiteLeading && !allWhiteTrailing){
+						result.append(line.substring(0, starStartIndex) + line.substring(starEndIndex + 2, line.length()));
+						result.append("\n");
+					}
+					star = false;
+				}
+				/* If the star comment for multiple lines */
+				else if(starStartIndex > -1){
+					if(!isAllWhiteSpaceLeadingLine(array, starStartIndex - 1)){
+						result.append(line.substring(0, starStartIndex));
+						result.append("\n");
+					}
+				}
+				else if(starEndIndex > -1){
+					if(!isAllWhiteSpaceTrailingLine(array, starEndIndex + 2)){
+						result.append(line.substring(starEndIndex + 2, line.length()));
+						result.append("\n");
+					}
+					star = false;
+				}
+			}
+		}
+		return result.toString();
+	}
+	
 }

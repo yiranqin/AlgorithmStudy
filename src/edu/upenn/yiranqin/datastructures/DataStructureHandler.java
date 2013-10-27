@@ -12,10 +12,10 @@ public class DataStructureHandler {
 	}
 	
 	public void start(){
-//		AVLTreeTest();
+		AVLTreeTest();
 //		BinaryTreeTest();
 //		twoTreesTest();
-		buildTreeTest();
+//		buildTreeTest();
 	}
 	
 	public void AVLTreeTest(){
@@ -45,8 +45,30 @@ public class DataStructureHandler {
 ////			ArrayUtil.printArray(curLevel);
 //			System.out.println();
 //		}
-		TreeUtil.printTree(avlTree.getRoot());
+		TreeUtil.printTree(root);
 		System.out.println(TreeUtil.diameterOfTree(root));
+		System.out.println("\nPrint out in order");
+		TreeUtil.MorrisTraversalInOrder(root);
+		System.out.println("\nPrint out pre order");
+		TreeUtil.MorrisTraversalPreOrder(root);
+		System.out.println("\nPrint out post order");
+		TreeUtil.MorrisTraversalPostOrder(root);
+		
+		System.out.println(TreeUtil.nthNodeInOrder(root, 19));
+		System.out.println(TreeUtil.nthNodeInReverseOrder(root, 21));
+		
+		System.out.println(TreeUtil.minHeight(root));		
+		System.out.println(TreeUtil.isBST(root));
+		System.out.println(TreeUtil.depth(root, new MyBinaryTreeNode<Integer>(29)));
+		
+		MyBinaryTreeNode<Integer> head = TreeUtil.convertTreeToDoublyLinkedList(root);
+		while(head != null){
+			System.out.print(head + ", ");
+			head = head.getRightChild();
+		}
+		System.out.println();
+		
+		
 	}
 	
 	public void buildTreeTest(){
@@ -62,9 +84,9 @@ public class DataStructureHandler {
     	
     	TreeUtil.mirror(root);
     	TreeUtil.printTree(root);
-    	TreeUtil.MorrisTraversal(root);
+    	TreeUtil.MorrisTraversalInOrder(root);
     	TreeUtil.traversePointer(root);
-    	System.out.println(TreeUtil.diameterOfTree(root));
+    	System.out.println(TreeUtil.diameterOfTree(root)); 	
 	}
 	
 	public void twoTreesTest(){
@@ -82,7 +104,7 @@ public class DataStructureHandler {
     	System.out.println(TreeUtil.isBalanced(avlTree1.getRoot()));
     	System.out.println(TreeUtil.isBalanced(avlTree2.getRoot()));
     	
-    	TreeUtil.MorrisTraversal(avlTree2.getRoot());
+    	TreeUtil.MorrisTraversalInOrder(avlTree2.getRoot());
     	
     	MyAVLTreeNode<Integer> avlOneRoot = avlTree1.getRoot();
     	TreeUtil.mirror(avlOneRoot);

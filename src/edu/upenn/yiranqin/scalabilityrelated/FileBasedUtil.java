@@ -3,21 +3,26 @@ package edu.upenn.yiranqin.scalabilityrelated;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
 //import java.util.PriorityQueue;
 import java.util.Scanner;
 
 import edu.upenn.yiranqin.arrayrelated.ArrayUtil;
 import edu.upenn.yiranqin.datastructures.MyArrayHeap;
+import edu.upenn.yiranqin.datastructures.MyHeap;
 
 public class FileBasedUtil{
 	public static final String DELIMITER = "\\r|\\n";
@@ -47,6 +52,12 @@ public class FileBasedUtil{
 		boolean inputNum = determineDataType(file); // true if the input is number, otherwise string
 		
 		File[] tmpFiles = preProcess(file, groups, memoryLimit * 1024 * 1024, inputNum, useNIO, forParallelSorting);
+		if(forParallelSorting){
+			for(File tmpFile : tmpFiles){
+				SortingWorker worker = new SortingWorker(tmpFile, inputNum);
+				worker.run();
+			}
+		}
 		String outputPath = file.getParentFile() +"/" + file.getName() + "-sorted";
 		
 		if(inputNum){
@@ -126,6 +137,7 @@ public class FileBasedUtil{
 		FileInputStream input = null;
 		FileReader inputIO = null;
 		PrintWriter[] writers = new PrintWriter[groups];
+		FileOutputStream[] outputs = new FileOutputStream[groups];
 		File[] tmpFiles = new File[groups];
 		for(int i = 0; i < groups; i++){
 			writers[i] = null;
@@ -150,24 +162,33 @@ public class FileBasedUtil{
 			 * Also, need to take care of the border cases since the data should be intact and not fragmented
 			 */
 			if(useNIO){
-				//TODO figure out why using this approach will crash and render null pointer, 
-				//TODO also figure out a way to utilize transferTo() method to separate the whole large file into smaller ones 
+				//TODO figure out a way to utilize transferTo() method to separate the whole large file into smaller ones and handle each one using threads
+				//TODO currently the transferTo seems do nothing
 				
 				input = new FileInputStream( file.getName() );
 				FileChannel channel = input.getChannel( );
+				FileChannel outputChannel = null;
 				ByteBuffer buffer = ByteBuffer.allocateDirect( 8 * 1024);
 				byte[] barray = new byte[memoryLimit];
 				boolean leftOver = false;
 				int curSize = 0;
 				int nInBuf = 0;
+				long totalOffset = 0;
+				
 				for(int i = 0; i < groups; i++){
 					tmpFiles[i] = new File(tmpDir.getAbsolutePath() + "/pre" +i);
 					if(!tmpFiles[i].exists())
 						tmpFiles[i].createNewFile();
-					writers[i] = new PrintWriter(new FileWriter(tmpFiles[i]));
+					if(!forParallelSorting)
+						writers[i] = new PrintWriter(new FileWriter(tmpFiles[i]));
+					else{
+						outputs[i] = new FileOutputStream( tmpFiles[i].getName() );
+						outputChannel = outputs[i].getChannel();
+					}
 					
 					int nRead = 0;
-					nInBuf = 0; 
+					nInBuf = 0;
+					leftOver = false;
 					while ( (nRead = channel.read( buffer )) != -1 )
 					{
 					    if ( nRead == 0 )
@@ -182,7 +203,7 @@ public class FileBasedUtil{
 					    	 * While adding it into the destination buffer will exceed memory limit
 					    	 * take it as leftover and make it the first bytes for the next round 
 					    	 */
-					    	if(curSize + nInBuf > memoryLimit){
+					    	if(curSize + nInBuf >= memoryLimit){
 					    		leftOver = true;
 					    		break;
 					    	}
@@ -194,45 +215,51 @@ public class FileBasedUtil{
 					    
 					    buffer.clear();
 					}
-					
-					if(curSize == memoryLimit)
-						leftOver = false;
+//					System.out.println("curSize before overflow " + curSize);
 					/**
 					 * Find the last delimiter in the buffer and calculate the offset
 					 * Always make the string end with delimiter and thus guarantee the data integrity
 					 */
-					int offset = findLastDelimiter(barray, curSize - 1);
+					int offset = findLastDelimiter(barray, curSize -1);
 					curSize -= offset;
-					String value = new String(barray, 0, curSize, "US-ASCII");
-					String[] values = value.split(DELIMITER);
 					
-					if(isNum){
-						Long[] list = new Long[values.length]; 
-						for(int index = 0; index < values.length; index++){
-							list[index] = Long.parseLong(values[index]);
-						}
-						ArrayUtil.quickSortRandom(list, 0, list.length - 1);
-						for(int index = 0; index < values.length; index++){
-							writers[i].write(Long.toString(list[index]) + "\n");
+					if(!forParallelSorting){
+						String value = new String(barray, 0, curSize, "US-ASCII");
+						String[] values = value.split(DELIMITER);
+						
+						if(isNum){
+							Long[] list = new Long[values.length]; 
+							for(int index = 0; index < values.length; index++){
+								list[index] = Long.parseLong(values[index]);
+							}
+							ArrayUtil.quickSortRandom(list, 0, list.length - 1);
+							for(int index = 0; index < values.length; index++){
+								writers[i].write(Long.toString(list[index]) + '\n');
+							}
+						}else{
+							ArrayUtil.quickSortRandom(values, 0, values.length - 1);
+							for(int index = 0; index < values.length; index++){
+								writers[i].write(values[index] + '\n');
+							}
 						}
 					}else{
-						ArrayUtil.quickSortRandom(values, 0, values.length - 1);
-						for(int index = 0; index < values.length; index++){
-							writers[i].write(values[index] + "\n");
+						long amountTransfered = 0;
+						while(amountTransfered < curSize){
+							amountTransfered += channel.transferTo(totalOffset, curSize - amountTransfered, outputChannel);
+							totalOffset += amountTransfered;
 						}
 					}
 					
 					moveBytes(barray, curSize, 0, offset);
 					curSize = offset;
-					if(leftOver){
-						while( buffer.hasRemaining())
-					    {	
-					    	nInBuf = buffer.remaining();
-					        buffer.get( barray, curSize, nInBuf);
-					    	curSize += nInBuf;
-					    }
-				    	buffer.clear();
-					}
+					while( buffer.hasRemaining())
+				    {	
+				    	nInBuf = buffer.remaining();
+				        buffer.get( barray, curSize, nInBuf);
+				    	curSize += nInBuf;
+				    }
+			    	buffer.clear();
+//			    	System.out.println("curSize after filled remaining " + curSize);
 				}//end for for loop for each tmp file
 			}//end for using NIO
 			else{
@@ -280,6 +307,10 @@ public class FileBasedUtil{
 					if(writer != null)
 						writer.close();
 				}
+				for(FileOutputStream output : outputs){
+					if(output != null)
+						output.close();
+				}
 			}catch(Exception ex){
 				ex.printStackTrace();
 			}
@@ -290,9 +321,9 @@ public class FileBasedUtil{
 	
 	private static int findLastDelimiter(byte[] array, int start){
 		int offset = 0;
-		for(offset = 0; offset <= start; offset++){
-			if((char)array[start - offset] == '\n' || (char)array[start - offset] == '\r')
-				break;
+		while(start >= 0 && array[start] != '\n' && array[start] != '\r') {
+			start--;
+			offset++;
 		}
 		return offset;
 	}
@@ -305,7 +336,7 @@ public class FileBasedUtil{
 	 * @param len
 	 */
 	public static void moveBytes(byte[] array, int srcStart, int dstStart, int len){
-		if(len == 0 || srcStart + len > array.length || dstStart + len > array.length 
+		if(len <= 0 || srcStart + len > array.length || dstStart + len > array.length 
 				|| srcStart == dstStart){
 			return;
 		}
@@ -318,7 +349,7 @@ public class FileBasedUtil{
 			int seqDegree){
 		if(files == null)
 			return null;
-		System.out.println("merging" + files.length + " to " +outputPath);
+		System.out.println("merging " + files.length + " to " +outputPath);
 		
 		int groups = files.length;
 		
@@ -340,34 +371,41 @@ public class FileBasedUtil{
 			outputFile = new File(outputPath);
 			if(!outputFile.exists())
 				outputFile.createNewFile();
-			
 			writer = new PrintWriter(new FileWriter(outputFile));
 			
-			Long[] buffer = new Long[groups]; 
-			MyArrayHeap<Long> heap = new MyArrayHeap<Long>(buffer, true, false);
+			
 //			PriorityQueue<Long> heap = new PriorityQueue<Long>();
-			HashMap<Long, Integer> refMap = new HashMap<Long, Integer>();
+//			/* Using map will not allow duplicate elements, 
+//			 * better wrap the key and reference to a new class and form HashSet */
+//			HashMap<Long, Integer> refMap = new HashMap<Long, Integer>();
+			MyHeap<ObjectReference<Long>> heap = new MyHeap<ObjectReference<Long>>(true);
 			
 			String curStr = null;
+			ObjectReference<Long> curObj;
 			Long curValue;
 			int listIndex = 0;
 			for(int i = 0; i < groups; i++){
 				curValue = Long.parseLong(readers[i].readLine());
-				heap.insert(curValue);
 //				heap.add(curValue);
-				refMap.put(curValue, i);
+//				refMap.put(curValue, i);
+				heap.insert(new ObjectReference<Long>(curValue, i));
 			}
 			
 			while(true){//(!dataFlag.isAllClear())
-				curValue = heap.peek();
-				listIndex = refMap.get(curValue);
-				heap.delete();
+//				curValue = heap.peek();
+//				listIndex = refMap.get(curValue);
+//				System.out.println(curValue + " " + heap.size());
 //				heap.remove();
-				refMap.remove(curValue);
-				writer.write(curValue + "\n");
-				
-				curStr = readers[listIndex].readLine();
+//				refMap.remove(curValue);
+//				writer.write(curValue + "\n");
 //				System.out.println(curStr + " " + listIndex);
+
+				curObj = heap.peek();
+				listIndex = curObj.listReference;
+				heap.delete();
+				writer.write(curObj.value + "\n");
+//				System.out.println(curObj.value + " " + heap.size() + " " + listIndex);
+				curStr = readers[listIndex].readLine();
 				if(curStr == null){
 					dataFlag.clearBit(listIndex);
 					if(heap.size() > 0)
@@ -381,9 +419,9 @@ public class FileBasedUtil{
 					}
 				}				
 				curValue = Long.parseLong(curStr);
-				heap.insert(curValue);
 //				heap.add(curValue);
-				refMap.put(curValue, listIndex);
+//				refMap.put(curValue, listIndex);
+				heap.insert(new ObjectReference<Long>(curValue, listIndex));
 			}
 			//TODO
 			//read in chunk memory but still merge with files.length heap
@@ -408,10 +446,38 @@ public class FileBasedUtil{
 		return outputFile;
 	}
 	
+	private static class ObjectReference <T extends Comparable<? super T>> implements Comparable<ObjectReference<T>>{
+		public T value;
+		public int listReference = 0;
+		public ObjectReference(T value, int listReference){
+			this.value = value;
+			this.listReference = listReference;
+		}
+		@Override
+		public int compareTo(ObjectReference<T> arg0) {
+			return value.compareTo( arg0.value );
+		}
+	}
+	
+	private static class SortingWorker implements Runnable{
+		public File file;
+		public boolean isNum;
+		
+		public SortingWorker(File file, boolean isNum){
+			this.file = file;
+			this.isNum = isNum;
+		}
+		
+		@Override
+		public void run() {
+			sortSmallFile(file, isNum, false);
+		}		
+	}
+	
 	/**
 	 * Really bad idea to compare two long number as string
 	 */
-	public static class longStrComparator implements Comparator<String>{
+	private static class longStrComparator implements Comparator<String>{
 		@Override
 		public int compare(String s1, String s2) {
 			if(s1.length() > s2.length())

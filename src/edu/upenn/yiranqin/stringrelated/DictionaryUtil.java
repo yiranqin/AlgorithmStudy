@@ -17,7 +17,7 @@ public class DictionaryUtil {
 			reader = new BufferedReader(new FileReader(file));
 			String curWord = null;
 			while((curWord = reader.readLine()) != null){
-				dicTrie.addWord(curWord);
+				dicTrie.addWord(curWord.toLowerCase());
 			}
 		}catch(Exception ex){
 			ex.printStackTrace();

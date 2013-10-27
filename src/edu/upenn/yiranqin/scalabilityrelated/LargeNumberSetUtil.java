@@ -126,9 +126,10 @@ public class LargeNumberSetUtil {
 			
 			input = new Scanner(new FileReader(file));
 			scale = i * bitNum * blockNum2;
+			int range = bitNum * blockNum2;
 			while(input.hasNext()){
 				int cur = input.nextInt();
-				if(cur >= i * bitNum * blockNum2 && cur < (i + 1) * bitNum * blockNum2){
+				if(cur >= scale && cur < scale + range){
 //				if((cur / (bitNum * blockNum2)) == i){	
 					blocks2[(cur - scale) % bitNum == 0? (cur - scale)/bitNum - 1 : (cur - scale)/bitNum]++;
 				}

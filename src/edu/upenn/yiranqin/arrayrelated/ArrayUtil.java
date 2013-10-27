@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 
 public class ArrayUtil{
 	public static void printArray(int[] array){
@@ -1259,7 +1260,7 @@ public class ArrayUtil{
 		}
 		array[index] = bubble;
 	}
-		
+	
 	public static void heapSelection(int[] array, int k, boolean min){
 		if(array == null || array.length == 0 || k > array.length)
 			return;
@@ -1347,6 +1348,43 @@ public class ArrayUtil{
 		}
 	}
 	
+	public static Integer[] priorityQueueSelection(Integer[] array, int k){
+		Integer[] result = new Integer[k];
+		return priorityQueueSelection(array, k, new IntegerPQSelectionComparator()).toArray(result);
+	}
+	
+	private static class IntegerPQSelectionComparator implements Comparator<Integer>{
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			return o1.compareTo(o2) * (-1);
+		}
+	}
+	
+	public static <T extends Comparable<? super T>>
+	PriorityQueue<T> priorityQueueSelection(T[] array, int k, Comparator<T> comp){
+		if(array == null || array.length == 0 || k > array.length)
+			return null;
+		
+		PriorityQueue<T> heap = new PriorityQueue<T>(array.length, comp);
+		for(int i = 0; i < k; i ++){
+			heap.add(array[i]);
+		}		
+		
+		for(int i = k; i < array.length; i++){
+			/**
+			 * For a max heap, the comparator will be counter intuitive as when comparing two elements,
+			 * compare(a, b) > 0 when a < b, 
+			 * 
+			 * In current setting, only need to update heap when compare > 0, regardless of the comparator  
+			 */
+			if(comp.compare(array[i], heap.peek()) > 0){
+				heap.poll();
+				heap.add(array[i]);
+			}
+		}
+		return heap;
+	}
+	
 	/**
 	 * Print the heap with each element exactly INLINE char long
 	 * This could also be set as the value with most digits
@@ -1427,7 +1465,6 @@ public class ArrayUtil{
 			return result;
 		
 		result = new LinkedList<T[]>();
-		
 		fullPermutationRecursively(array, 0, array.length - 1, result);		
 		return result;
 	}
@@ -1460,19 +1497,32 @@ public class ArrayUtil{
 		if(array == null)
 			return null;
 		
-		quickSortRandom(array, 0, array.length - 1);
 		ArrayList<T> distinctEles = new ArrayList<T>();
 		ArrayList<Integer> occurNum = new ArrayList<Integer>();
 		
+//		quickSortRandom(array, 0, array.length - 1);
+//		for(int i = 0; i < array.length; i++){
+//			int count = 1;
+//			while(i + 1 < array.length && array[i] == array[i+1]){
+//				count++;
+//				i++;
+//			}
+//			distinctEles.add(array[i]);
+//			occurNum.add(count);			
+//		}		
+		HashMap<T, Integer> map = new HashMap<T, Integer>();
 		for(int i = 0; i < array.length; i++){
-			int count = 1;
-			while(i + 1 < array.length && array[i] == array[i+1]){
-				count++;
-				i++;
+			if(!map.containsKey(array[i]))
+				map.put(array[i], 1);
+			else{
+				int count = map.get(array[i]);
+				map.remove(array[i]);
+				map.put(array[i], count + 1);
 			}
-			distinctEles.add(array[i]);
-			occurNum.add(count);			
 		}
+		distinctEles.addAll(map.keySet());
+		occurNum.addAll(map.values());
+		
 		
 		LinkedList<ArrayList<T>> allNumLists = new LinkedList<ArrayList<T>>();
 		allNumLists.add(null);
@@ -1671,7 +1721,7 @@ public class ArrayUtil{
 	}
 	
 	/**
-	 * Find a sub-array that contains elements with sum and size k
+	 * Find all sub-array that contain elements with sum and size k
 	 * @param A
 	 * @param sum
 	 * @param N
@@ -1694,6 +1744,57 @@ public class ArrayUtil{
 				result.add(Arrays.copyOfRange(array, i-(k-1), i + 1));
 			}
 		}
+		return result;
+	}
+	
+	/**
+	 * find all continuous sub array to a certain sum based on increment
+	 * array [-1, -3, 4, 5, -2, -3, -1]
+	 * sum array [0, -1, -4, 0, 5, 3, 0, -1]
+	 * 
+	 * if we want to find all that sum to 0, we could just find all equal pairs
+	 *  as for the segment within this range, no other increment
+	 *  
+	 * Similarly, if we want to find all that sum to 3, we could just find all pairs with increment of 3
+	 *  as for the segment within this range, the sum is exactly 3
+	 *   
+	 * @param array
+	 * @param sum
+	 * @return
+	 */
+	public static LinkedList<int[]> findAllContinuousSubArrayToSum(int[] array, int sum){
+		int[] sumArray = new int[array.length + 1];
+		sumArray[0] = 0;
+		for(int i = 0; i < array.length; i++){
+			sumArray[i + 1] = sumArray[i] + array[i];
+		}
+		
+		HashMap<Integer, ArrayList<Integer>> sumMap = new HashMap<Integer,ArrayList<Integer>>();
+		HashMap<Integer, Integer> targetMap = new HashMap<Integer, Integer>();
+		LinkedList<int[]> result = new LinkedList<int[]>();
+		
+		for(int i = 0; i < sumArray.length; i++){
+			if(!sumMap.containsKey(sumArray[i])){
+				ArrayList<Integer> sumList = new ArrayList<Integer>();
+				sumList.add(i);
+				sumMap.put(sumArray[i], sumList);
+			}else{
+				ArrayList<Integer> sumList = sumMap.get(sumArray[i]);
+				sumList.add(i);
+			}
+			
+			int target = sumArray[i] + sum;
+			targetMap.put(target, sumArray[i]);
+			if(targetMap.containsKey(sumArray[i])){
+				ArrayList<Integer> sumList = sumMap.get(targetMap.get(sumArray[i]));
+				for(int startIndex : sumList){
+					if(startIndex != i){
+						result.add(Arrays.copyOfRange(array, startIndex, i));
+					}
+				}
+			}
+		}
+		
 		return result;
 	}
 	

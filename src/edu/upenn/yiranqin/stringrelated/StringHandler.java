@@ -6,10 +6,7 @@ import edu.upenn.yiranqin.arrayrelated.ArrayUtil;
 import edu.upenn.yiranqin.datastructures.MyTrie;
 
 public class StringHandler {
-	public String exampleAllWords = "verygoodboy";
-	public String exampleAllWordsWithDiffParse = "Thisisawesome";
-	public String exampleNotAllWords = "thit";
-	public String exampleNoWords = "thumgry";	
+		
 	
 	public static void main(String[] argv){
 		new StringHandler().start();
@@ -20,7 +17,101 @@ public class StringHandler {
 //		palindromeTest();
 //		LCSTest();
 //		stringUtilTest();
-		dictionaryUtilTest();
+//		dictionaryUtilTest();
+//		parseSentenceTest();
+		eliminateCommentsTest();
+	}
+	
+	public void eliminateCommentsTest(){
+		StringBuilder testString = new StringBuilder();
+		testString.append("	/**\n");
+		testString.append("	* KMP algorithm used for determine if a String W is the substring of String S\n");
+		testString.append("	* @param S\n");
+		testString.append("	* @param W\n");
+		testString.append("	* @return\n");
+		testString.append("	*/\n");
+		testString.append("/*NO NO NO*/\n");
+		testString.append("	public static int KMP(String S, String W){\n");
+		testString.append("		int m = 0; //the beginning of the current match in S\n");
+		testString.append("/*Extreme Condition*/\n");
+		testString.append("//verbose\n");
+		testString.append("		int i = 0; //the position of the current character in W\n");
+		testString.append("		int sLen = S.length();\n");
+		testString.append("		final int N = W.length();\n");
+		testString.append("		int[] T = new int[N];\n");
+		testString.append("		/* the table used in KMP is the table used for backtracking where to start when a mismatch happens */\n");
+		testString.append("		T = KMPtable(T,W);\n");
+		testString.append("\n");
+		testString.append("		//main while loop to handle all\n");
+		testString.append("		while( (m + i) < sLen){\n");
+		testString.append("			/*wrong*/if(W.charAt(i) == S.charAt(m + i)){\n");
+		testString.append("				if(i == (W.length() - 1)){/* this should not be kept*/  \n");
+		testString.append("					return m;\n");
+		testString.append("				}\n");
+		testString.append("				//move forward if match\n");
+		testString.append("				/*//ugly comment*/i++;\n");
+		testString.append("				/* this is not\n");
+		testString.append("				int a = 0;\n");
+		testString.append("				used anywhere*/\n");
+		testString.append("			}\n");
+		testString.append("			else{\n");
+		testString.append("			//this /*comment*/ is ugly\n");
+		testString.append("				m = m + i -T[i]; //only move back the pointer T[i] step\n");
+		testString.append("				if(T[i] > -1){/* /* //This is gonna be nasty and invalid comment */*/\n");
+		testString.append("					i = T[i];\n");
+		testString.append("   	//these line doest not fit inline \n");
+		testString.append("  //and looks weird \n");
+		testString.append("				}else{\n");
+		testString.append("					i = 0;\n");
+		testString.append("				}\n");
+		testString.append("			}\n"); 
+		testString.append("		}/*end of the while loop*/\n");
+		testString.append("		/*return the length*/return sLen;\n");
+		testString.append("	}\n");
+		testString.append("/*what a crappy program*/     \n");
+		testString.append("//don't do this again */\n");
+		String testStr = testString.toString(); 
+		
+		int repetition = 100;
+		System.out.println(testStr);
+		System.out.println("\n");
+		
+		long start = System.currentTimeMillis(); 
+		System.out.println(testStr.replaceAll("(?:[\\n\\r]/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/[\\n\\r]+)|(?:[\\t\\x0b\\f]+/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/[\\n\\r]+)|(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|([\\t\\x0b\\f]+//.*[\\n\\r])|(//.*)", ""));
+		System.out.println("\n");
+		for(int i = 0; i < 100; i++){
+			testStr.replaceAll("(?:[\\n\\r]/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/[\\n\\r]+)|(?:[\\t\\x0b\\f]+/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/[\\n\\r]+)|(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|([\\t\\x0b\\f]+//.*[\\n\\r])|(//.*)", "");
+		}
+		long end1 = System.currentTimeMillis();
+		System.out.println(repetition + " repetitions regular expression " + (end1 - start));
+		
+		System.out.println(StringUtil.eliminateCommentsByChar(testStr));
+		System.out.println("\n");
+		for(int i = 0; i < 100; i++){
+			StringUtil.eliminateCommentsByChar(testStr);
+		}
+		long end2 = System.currentTimeMillis();
+		System.out.println(repetition + " repetitions char by char " + (end2 - end1));
+		
+		System.out.println(StringUtil.eliminateCommentsByLine(testStr));
+		for(int i = 0; i < 100; i++){
+			StringUtil.eliminateCommentsByLine(testStr);
+		}
+		long end3 = System.currentTimeMillis();
+		System.out.println(repetition + " repetitions line by line " + (end3 - end2));
+	}
+	
+	public void parseSentenceTest(){
+		String exampleAllWords = "verygoodboy";
+		String exampleAllWordsWithDiffParse = "Thisisawesome";
+		String exampleNotAllWords = "thit";
+		String exampleNoWords = "thumgry";
+		
+		System.out.println(StringUtil.unconcatenateStringIntoWords(exampleAllWords));
+		System.out.println(StringUtil.unconcatenateStringIntoWords(exampleAllWordsWithDiffParse));
+		System.out.println(StringUtil.unconcatenateStringIntoWords(exampleNotAllWords));
+		System.out.println(StringUtil.unconcatenateStringIntoWords(exampleNoWords));
+		
 	}
 	
 	public void dictionaryUtilTest(){
@@ -73,6 +164,7 @@ public class StringHandler {
 	public void stringUtilTest(){
 		ArrayUtil.printArray(StringUtil.allSubstring("aaaa"));
 		ArrayUtil.printArray(StringUtil.fullPermutation("123"));
+		
     	try{
     		String str = "2334300";
     		long num = StringUtil.stringToInt(str);
@@ -80,20 +172,6 @@ public class StringHandler {
     	}catch(Exception ex){
     		ex.printStackTrace();
     	}
-	}
-	
-	public int parseSimple(int wordStart, int wordEnd, String sentence){
-		if(wordEnd >= sentence.length())
-			return wordEnd - wordStart;
-		
-		String word = sentence.substring(wordStart, wordEnd + 1);
-		
-		int bestExact = parseSimple(wordEnd + 1, wordEnd + 1, sentence);
-		int bestExtend = parseSimple(wordStart, wordEnd + 1, sentence);
-		
-		System.out.println(word + " " + bestExact + " " + bestExtend);
-		return Math.min(bestExact, bestExtend);
-	
 	}
 	
 	public void URLParserTest(){

@@ -153,13 +153,13 @@ public class MatrixUtil {
 		int layer = 0;
 		for(layer = 0; layer < matrix.length/2; layer++){
 			int offset = matrix.length - 1 - layer;
-			for(int i = layer + 1; i <= offset; i++){
+			for(int i = layer; i < offset; i++){
 				int tmp = matrix[layer][i];
 				
 				matrix[layer][i] = matrix[offset - i][layer];
-				matrix[offset - i][layer] = matrix[matrix.length - layer - 1][offset - i];
-				matrix[matrix.length - layer - 1][offset - i] = matrix[i][matrix.length - layer - 1];
-				matrix[i][matrix.length - layer - 1] = tmp;
+				matrix[offset - i][layer] = matrix[offset][offset - i];
+				matrix[offset][offset - i] = matrix[i][offset];
+				matrix[i][offset] = tmp;
 			}
 		}
 	}
@@ -193,6 +193,7 @@ public class MatrixUtil {
 				for(int i = layer + 1; i < rows - 1 ; i++, count++)
 					newMatrix[layer][newMatrix[0].length - 1 - i] = matrix[i][layer];	
 			}
+			layer++;
 		}
 		
 		return newMatrix;

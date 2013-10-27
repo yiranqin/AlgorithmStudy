@@ -3,6 +3,7 @@ package edu.upenn.yiranqin.arrayrelated;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 
 import edu.upenn.yiranqin.scalabilityrelated.SuperLargeNumberByte;
 
@@ -17,9 +18,9 @@ public class ArrayHandler {
 		HashSet<Integer> set = new HashSet<Integer>();
 		set.add(0);
 		
-//		selectionKTest();
+		selectionKTest();
 //		profitTest();
-		arrayUtilTest();
+//		arrayUtilTest();
 	}
 	
 	public void arrayUtilTest(){
@@ -62,7 +63,14 @@ public class ArrayHandler {
     	ArrayUtil.printArray(array1);
     	
     	System.out.println(ArrayUtil.searchBucketOrderedArray(array1, 36));
+    	System.out.println();
     	
+    	int[] testArray3 = {-1, -3, 4, 5, -2, -3, -1};
+    	ArrayUtil.printArray(testArray3);
+    	LinkedList<int[]> result = ArrayUtil.findAllContinuousSubArrayToSum(testArray3, 9);
+    	for(int[] subarray : result){
+    		ArrayUtil.printArray(subarray);
+    	}
 	}
 	
 	public void profitTest(){
@@ -221,13 +229,14 @@ public class ArrayHandler {
 	}
 	
 	public void selectionKTest(){
-		int size = 61;
+		int size = 300;
 		int repetition = 10000;
 		int[] distinctArray = ArrayUtil.generateDistinctIntArray(size);//ArrayUtil.generateRandomArray(size);//
+		Integer[] disIntegerArray = ArrayUtil.generateIntegerArray(1, size);
 		
 		long end11 = System.currentTimeMillis();
 		ArrayUtil.shuffleArray(distinctArray);
-		int k = 3;
+		int k = 10;
 		boolean increasing = false;
 		boolean random = true;
 //		ArrayUtil.printSubArray(distinctArray, 0, ArrayUtil.quickSelection(distinctArray, k, increasing, random));
@@ -258,12 +267,23 @@ public class ArrayHandler {
 		long end14 = System.currentTimeMillis();
 		System.out.println(repetition +" Heap Selection:" + (end14 - end13));
 		
-		ArrayUtil.shuffleArray(distinctArray);
-		ArrayUtil.printArray(distinctArray);
-		ArrayUtil.buildHeap(distinctArray, distinctArray.length, false);
-		ArrayUtil.printArray(distinctArray);
+		ArrayUtil.shuffleArray(disIntegerArray);
+		Integer[] result = ArrayUtil.priorityQueueSelection(disIntegerArray, k);
+//		ArrayUtil.printArray(result);
+		for(int i = 0; i < repetition; i++){
+			ArrayUtil.shuffleArray(disIntegerArray);
+			ArrayUtil.priorityQueueSelection(disIntegerArray, k);
+		}
+		long end15 = System.currentTimeMillis();
+		System.out.println(repetition +" PriorityQueue Selection:" + (end15 - end14));
 		
-		ArrayUtil.printHeap(distinctArray);
+		
+//		ArrayUtil.shuffleArray(distinctArray);
+//		ArrayUtil.printArray(distinctArray);
+//		ArrayUtil.buildHeap(distinctArray, distinctArray.length, false);
+//		ArrayUtil.printArray(distinctArray);
+//		
+//		ArrayUtil.printHeap(distinctArray);
 	}
 	
 	public void partitionTest(){
